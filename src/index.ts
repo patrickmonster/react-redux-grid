@@ -1,12 +1,12 @@
-import Grid from "./components/Grid";
-import Store from "./store/store";
+import Grid from "@/components/Grid";
+import Store from "@/store/store";
 
-import { Reducers } from "./reducers";
+import { Reducers } from "@/reducers";
 
-import { Actions } from "./actions";
+import { Actions } from "@/actions";
 
-import * as ActionTypes from "./constants/ActionTypes";
-import { applyGridConfig } from "./constants/GridConstants.js";
+import * as ActionTypes from "@/constants/ActionTypes";
+import { applyGridConfig } from "@/constants/GridConstants";
 
 const modules = {
     Actions,

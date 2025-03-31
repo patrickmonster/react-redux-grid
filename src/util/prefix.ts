@@ -1,6 +1,6 @@
 import { gridConfig } from "@/constants/GridConstants";
 
-export const prefix = (...classes) => {
+export const prefix = (...classes: any[]) => {
     const { CSS_PREFIX } = gridConfig();
     const DELIMITER = CSS_PREFIX ? "-" : "";
 

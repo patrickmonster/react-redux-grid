@@ -1,11 +1,10 @@
-import React from "react";
 import { doLocalSort, doRemoteSort } from "@/actions/GridActions";
+import ActionColumn from "@/components/plugins/gridactions/ActionColumn";
 import { DEFAULT_PAGE_SIZE, SORT_METHODS } from "@/constants/GridConstants";
 import { fireEvent } from "@/util/fire";
 import { nameFromDataIndex } from "@/util/getData";
 import { keyFromObject } from "@/util/keyGenerator";
 import sorter from "@/util/sorter";
-import ActionColumn from "@/components/plugins/gridactions/ActionColumn";
 
 export default class ColumnManager {
     init({ plugins, store, events, selModel, editor, columns, dataSource }) {
@@ -47,7 +46,6 @@ export default class ColumnManager {
 
         this.plugins = plugins;
         this.store = store;
-        this.sorter = sorter;
         this.events = events;
         this.selModel = selModel;
         this.editor = editor;
@@ -105,11 +103,7 @@ export default class ColumnManager {
             const data =
                 typeof column.sortFn === "function"
                     ? dataSource.data.sort(column.sortFn.bind(null, direction))
-                    : this.sorter.sortBy(
-                          column.dataIndex,
-                          direction,
-                          dataSource
-                      );
+                    : sorter(column.dataIndex, direction, dataSource);
 
             this.store.dispatch(
                 doLocalSort({

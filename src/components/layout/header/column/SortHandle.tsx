@@ -3,7 +3,13 @@ import PropTypes from "prop-types";
 import { gridConfig } from "@/constants/GridConstants";
 import { prefix } from "@/util/prefix";
 
-export const SortHandle = ({ direction, sortHandleCls }) => (
+export const SortHandle = ({
+    direction,
+    sortHandleCls,
+}: {
+    direction: string;
+    sortHandleCls: string;
+}) => (
     <span
         className={prefix(
             gridConfig().CLASS_NAMES.SORT_HANDLE,

@@ -66,7 +66,7 @@ export const setKeysInData = (data) => {
     return fromJS(data);
 };
 
-export const getRowKey = (columns, rowValues, suffix) => {
+export const getRowKey = (columns: any[], rowValues: any, suffix?: string) => {
     const uniqueCol = columns.filter((col) => col.createKeyFrom);
     let val = rowValues.get("_key");
 

@@ -6,7 +6,7 @@ import { gridConfig } from "../../constants/GridConstants.js";
 import { prefix } from "../../util/prefix.js";
 import { debounce, throttle } from "../../util/throttle.js";
 import Header from "./Header";
-import Row from "./TableRow";
+import Row from "./TableRow.js";
 
 const { any, bool, number, object, oneOfType, string } = PropTypes;
 

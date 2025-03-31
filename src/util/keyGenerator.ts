@@ -1,7 +1,7 @@
 export const keyGenerator = (...keywords: string[]) =>
     encode(Array.from(keywords).join(""));
 
-export const keyFromObject = (obj: any, additionalStrings: string[]) => {
+export const keyFromObject = (obj: any, additionalStrings?: string[]) => {
     if (additionalStrings && Array.isArray(additionalStrings)) {
         return encode(
             additionalStrings.join("") +

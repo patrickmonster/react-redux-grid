@@ -1,15 +1,15 @@
-import PropTypes from 'prop-types';
-import React, { Component } from 'react';
-import { shouldRowUpdate } from '../../../../util/shouldComponentUpdate';
+import { shouldRowUpdate } from "@/util/shouldComponentUpdate";
+import PropTypes from "prop-types";
+import { Component } from "react";
 
 const { object } = PropTypes;
 
-export default DecoratedComponent => (
+export default (DecoratedComponent) =>
     class RowContainer extends Component {
         render() {
             return (
                 <DecoratedComponent
-                    { ...{ ...this.props, getTreeData: this.getTreeData } }
+                    {...{ ...this.props, getTreeData: this.getTreeData }}
                 />
             );
         }
@@ -20,9 +20,8 @@ export default DecoratedComponent => (
         }
 
         static propTypes = {
-            treeData: object
+            treeData: object,
         };
 
         getTreeData = () => this.props.treeData;
-    }
-);
+    };

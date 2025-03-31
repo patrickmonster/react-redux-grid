@@ -1,113 +1,303 @@
 import deepEqual from "deep-equal";
-import PropTypes from "prop-types";
-import { Component } from "react";
+import {
+    Component,
+    createContext,
+    useContext,
+    useEffect,
+    useState,
+} from "react";
 import { connect } from "react-redux";
 
-import ColumnManager from "@/components/core/ColumnManager";
 import FixedHeader from "@/components/layout/FixedHeader";
 import TableContainer from "@/components/layout/TableContainer";
 import BulkActionToolbar from "@/components/plugins/bulkactions/Toolbar";
-import Manager from "@/components/plugins/editor/Manager";
 import Message from "@/components/plugins/errorhandler/Message";
 import LoadingBar from "@/components/plugins/loader/LoadingBar";
 import PagerToolbar from "@/components/plugins/pager/Pager";
-import Model from "@/components/plugins/selection/Model.ts";
 import { prefix } from "@/util/prefix";
 
-import { GRID_TYPES, gridConfig } from "@/constants/GridConstants.js";
+import { CLASS_NAMES, GRID_TYPES } from "@/constants/GridConstants";
 
-import {
-    getAsyncData,
-    setColumns,
-    setData,
-    setTreeData,
-} from "@/actions/GridActions";
+import * as Action from "@/actions/GridActions";
 import localStorageManager from "@/components/core/LocalStorageManager";
 import { getColumnsFromStorage } from "@/util/getColumnsFromStorage";
-import { isPluginEnabled } from "@/util/isPluginEnabled";
 import { mapStateToProps } from "@/util/mapStateToProps";
-import { shouldGridUpdate } from "@/util/shouldComponentUpdate";
 
 import styles from "@/style/main.styl";
+import { isPluginEnabled } from "@/util/isPluginEnabled";
 
-const { any, array, arrayOf, bool, object, oneOf, oneOfType, number, string } =
-    PropTypes;
+export type GridProps = {
+    columnState?: {
+        headerHidden?: boolean;
+        columns?: object[];
+        [key: string]: any;
+    };
+    columns: object[];
+    data?: object[] | object;
+    dataSource?: any;
+    dragAndDrop?: boolean;
+    editorState?: object;
+    emptyDataMessage?: any;
+    events?: object;
+    expandOnLoad?: boolean;
+    filterFields?: object;
+    gridData?: object;
+    gridType: GRID_TYPES;
+    height: string | number | boolean;
+    infinite?: boolean;
+    // loadingState?: boolean; // fix object -> boolean
+    isLoading?: boolean;
+    menuState?: object;
+    pageSize: number;
+    pager: object;
+    plugins: object;
+    reducerKeys: object | string;
+    selectedRows: object;
+    showTreeRootNode?: boolean;
+    stateKey: string;
+    stateful?: boolean;
+    store: object;
+} & React.HTMLProps<HTMLDivElement>;
 
-export class Grid extends Component {
-    render() {
-        const { CLASS_NAMES, USE_GRID_STYLES } = gridConfig();
-        const editorComponent = this.getEditor();
-        const isLoading = this.isLoading();
+const GridContext = createContext<{
+    store: any;
+}>({
+    store: null,
+});
+
+export const Grid = (props: GridProps) => {
+    const {
+        className,
+        columnState,
+        dataSource,
+        gridData,
+        height,
+        infinite,
+        pager,
+        pageSize,
+        plugins,
+        reducerKeys,
+        stateKey,
+        data,
+        expandOnLoad,
+        showTreeRootNode,
+        isLoading,
+    } = props;
+
+    const gridType = props.gridType || "grid";
+    const headerHidden = columnState ? columnState.headerHidden : false;
+    const [_USING_DATA_ARRAY, setGridDataType] = useState(false);
+
+    const getColumns = () => {
+        const { columns, columnState } = props;
+
+        return columnState && columnState.get && columnState.get("columns")
+            ? columnState.get("columns")
+            : columns;
+    };
+
+    const getStore = () => {
+        const { store } = useContext(GridContext);
+        return store || props.store;
+    };
+
+    const getHeaderProps = (visible) => ({
+        columnManager: this.columnManager,
+        columns: this.getColumns(),
+        plugins: this.props.plugins,
+        reducerKeys: this.props.reducerKeys,
+        dataSource: this.props.gridData,
+        filterFields: this.props.filterFields,
+        pager: this.props.pager,
+        pageSize: this.props.pageSize,
+        selectionModel: this.selectionModel,
+        stateKey: this.props.stateKey,
+        store: this.getStore(),
+        stateful: this.props.stateful,
+        visible,
+        menuState: this.props.menuState,
+        gridType: this.gridType,
+    });
+
+    const setColumns = (props?: { stateKey: string; stateful: boolean }) => {
+        const { stateKey, stateful } = props || {};
+        const store = getStore();
+        const columns = getColumns();
+
+        const savedColumns = stateful
+            ? getColumnsFromStorage(
+                  localStorageManager.getStateItem({
+                      stateKey,
+                      value: columns,
+                      property: "columns",
+                  }),
+                  columns
+              )
+            : columns;
+
+        if (!columns || columns.length === 0 || !Array.isArray(columns)) {
+            throw new Error("A columns array is required");
+        } else {
+            store.dispatch(
+                Action.setColumns({ columns: savedColumns, stateKey, stateful })
+            );
+        }
+    };
+
+    const setData = (extraParams = {}) => {
         const store = this.getStore();
 
-        if (!this.CSS_LOADED && USE_GRID_STYLES) {
-            this.CSS_LOADED = true;
-            this.addStyles();
+        const editMode = isPluginEnabled(plugins, "EDITOR")
+            ? plugins.EDITOR.type
+            : null;
+
+        const isDataSourceString =
+            typeof dataSource === "string" || typeof dataSource === "function";
+
+        switch (gridType) {
+            case "tree":
+                if (isDataSourceString) {
+                    setGridDataType(false);
+                    store.dispatch(
+                        Action.getAsyncData({
+                            stateKey,
+                            dataSource,
+                            type: "tree",
+                            showTreeRootNode,
+                            extraParams: {
+                                ...extraParams,
+                                expandOnLoad,
+                                editMode,
+                            },
+                        })
+                    );
+                } else {
+                    setGridDataType(true);
+                    store.dispatch(
+                        Action.setTreeData({
+                            stateKey,
+                            data,
+                            showTreeRootNode,
+                            extraParams: {
+                                ...extraParams,
+                                expandOnLoad,
+                                editMode,
+                            },
+                        })
+                    );
+                }
+                break;
+            case "grid":
+                if (isDataSourceString) {
+                    setGridDataType(false);
+                    store.dispatch(
+                        Action.getAsyncData({
+                            stateKey,
+                            dataSource,
+                            extraParams: { ...extraParams, editMode },
+                        })
+                    );
+                } else if (data) {
+                    setGridDataType(true);
+                    store.dispatch(
+                        Action.setData({ stateKey, data, editMode })
+                    );
+                } else {
+                    throw new Error(
+                        "A data source, or a static data set is required"
+                    );
+                }
+                break;
+            default:
+                throw new Error(`Grid type "${gridType}" is not supported`);
         }
+    };
 
-        const {
-            classNames,
-            columnState,
-            dataSource,
-            gridData,
-            height,
-            infinite,
-            pager,
-            pageSize,
+    // constructor(props) {
+    //     super(props);
+    //     this.shouldComponentUpdate = shouldGridUpdate.bind(this);
+    //     this.columnManager = new ColumnManager();
+    //     this.editor = new Manager();
+    //     this.selectionModel = new Model();
+    // }
+    //////////////////////////////////////////////////////////////////////
+
+    useEffect(() => {
+        const store = getStore();
+        const columns = getColumns();
+
+        if (!stateKey)
+            throw new Error("A stateKey is required to initialize the grid");
+
+        setColumns();
+
+        this.setData();
+
+        columnManager.init({
             plugins,
+            store,
+            events,
+            selectionModel: this.selectionModel,
+            editor: this.editor,
+            columns,
+            dataSource,
             reducerKeys,
-            stateKey,
-        } = this.props;
+        });
 
-        const headerHidden = columnState ? columnState.headerHidden : false;
+        selectionModel.init(plugins, stateKey, store, events);
 
-        return (
-            <div
-                className={prefix(
-                    CLASS_NAMES.CONTAINER,
-                    isLoading ? CLASS_NAMES.IS_LOADING : false,
-                    ...classNames
-                )}
-            >
-                <Message
-                    reducerKeys={reducerKeys}
-                    stateKey={stateKey}
-                    store={store}
-                    plugins={plugins}
-                />
-                <BulkActionToolbar
-                    plugins={plugins}
-                    reducerKeys={reducerKeys}
-                    selectionModel={this.selectionModel}
-                    stateKey={stateKey}
-                    store={store}
-                />
-                <FixedHeader
-                    headerHidden={headerHidden}
-                    {...this.getHeaderProps(true)}
-                />
-                <TableContainer
-                    editorComponent={editorComponent}
-                    headerProps={this.getHeaderProps(false)}
-                    height={height}
-                    infinite={infinite}
-                    rowProps={this.getRowProps()}
-                />
-                <PagerToolbar
-                    dataSource={dataSource}
-                    gridData={gridData}
-                    pageSize={pageSize}
-                    pagerState={pager}
-                    plugins={plugins}
-                    reducerKeys={reducerKeys}
-                    stateKey={stateKey}
-                    store={store}
-                />
-                <LoadingBar isLoading={isLoading} plugins={plugins} />
-            </div>
-        );
-    }
+        editor.init(plugins, stateKey, store, events);
+    }, []);
+    //////////////////////////////////////////////////////////////////////
 
+    return (
+        <div
+            className={prefix(
+                CLASS_NAMES.CONTAINER,
+                isLoading ? CLASS_NAMES.IS_LOADING : null,
+                className || ""
+            )}
+        >
+            <Message
+                reducerKeys={reducerKeys}
+                stateKey={stateKey}
+                store={store}
+                plugins={plugins}
+            />
+            <BulkActionToolbar
+                plugins={plugins}
+                reducerKeys={reducerKeys}
+                selectionModel={this.selectionModel}
+                stateKey={stateKey}
+                store={store}
+            />
+            <FixedHeader
+                headerHidden={headerHidden}
+                {...getHeaderProps(true)}
+            />
+            <TableContainer
+                editorComponent={editorComponent}
+                headerProps={getHeaderProps(false)}
+                height={height}
+                infinite={infinite}
+                rowProps={this.getRowProps()}
+            />
+            <PagerToolbar
+                dataSource={dataSource}
+                gridData={gridData}
+                pageSize={pageSize}
+                pagerState={pager}
+                plugins={plugins}
+                reducerKeys={reducerKeys}
+                stateKey={stateKey}
+                store={store}
+            />
+            <LoadingBar isLoading={isLoading} plugins={plugins} />
+        </div>
+    );
+};
+
+export class GridT extends Component {
     componentWillMount() {
         const { dataSource, gridType, events, plugins, reducerKeys, stateKey } =
             this.props;
@@ -170,18 +360,6 @@ export class Grid extends Component {
         }
     }
 
-    constructor(props) {
-        super(props);
-
-        this.shouldComponentUpdate = shouldGridUpdate.bind(this);
-
-        this.columnManager = new ColumnManager();
-
-        this.editor = new Manager();
-
-        this.selectionModel = new Model();
-    }
-
     static contextTypes = {
         store: object,
     };
@@ -229,132 +407,9 @@ export class Grid extends Component {
 
     static CSS_LOADED = false;
 
-    setGridDataType = (asArray) => {
-        this._USING_DATA_ARRAY = asArray;
-    };
-
     removeKeys = (item) => ({
         ...item,
         _key: undefined,
-    });
-
-    setData(extraParams = {}) {
-        const {
-            dataSource,
-            data,
-            expandOnLoad,
-            showTreeRootNode,
-            stateKey,
-            plugins,
-        } = this.props;
-
-        const store = this.getStore();
-
-        const editMode = isPluginEnabled(plugins, "EDITOR")
-            ? plugins.EDITOR.type
-            : null;
-
-        if (this.gridType === "tree") {
-            if (
-                typeof dataSource === "string" ||
-                typeof dataSource === "function"
-            ) {
-                this.setGridDataType(false);
-                store.dispatch(
-                    getAsyncData({
-                        stateKey,
-                        dataSource,
-                        type: "tree",
-                        showTreeRootNode,
-                        extraParams: {
-                            ...extraParams,
-                            expandOnLoad,
-                            editMode,
-                        },
-                    })
-                );
-            } else {
-                this.setGridDataType(true);
-                store.dispatch(
-                    setTreeData({
-                        stateKey,
-                        data,
-                        showTreeRootNode,
-                        extraParams: {
-                            ...extraParams,
-                            expandOnLoad,
-                            editMode,
-                        },
-                    })
-                );
-            }
-        } else if (this.gridType === "grid") {
-            if (
-                typeof dataSource === "string" ||
-                typeof dataSource === "function"
-            ) {
-                this.setGridDataType(false);
-                store.dispatch(
-                    getAsyncData({
-                        stateKey,
-                        dataSource,
-                        extraParams: { ...extraParams, editMode },
-                    })
-                );
-            } else if (data) {
-                this.setGridDataType(true);
-                store.dispatch(setData({ stateKey, data, editMode }));
-            } else {
-                throw new Error(
-                    "A data source, or a static data set is required"
-                );
-            }
-        }
-    }
-
-    setColumns() {
-        const { stateKey, stateful } = this.props;
-        const store = this.getStore();
-        const columns = this.getColumns();
-
-        let savedColumns = columns;
-
-        if (stateful) {
-            savedColumns = getColumnsFromStorage(
-                localStorageManager.getStateItem({
-                    stateKey,
-                    value: columns,
-                    property: "columns",
-                }),
-                columns
-            );
-        }
-
-        if (!columns || columns.length === 0 || !Array.isArray(columns)) {
-            throw new Error("A columns array is required");
-        } else {
-            store.dispatch(
-                setColumns({ columns: savedColumns, stateKey, stateful })
-            );
-        }
-    }
-
-    getHeaderProps = (visible) => ({
-        columnManager: this.columnManager,
-        columns: this.getColumns(),
-        plugins: this.props.plugins,
-        reducerKeys: this.props.reducerKeys,
-        dataSource: this.props.gridData,
-        filterFields: this.props.filterFields,
-        pager: this.props.pager,
-        pageSize: this.props.pageSize,
-        selectionModel: this.selectionModel,
-        stateKey: this.props.stateKey,
-        store: this.getStore(),
-        stateful: this.props.stateful,
-        visible,
-        menuState: this.props.menuState,
-        gridType: this.gridType,
     });
 
     getRowProps = () => ({
@@ -401,12 +456,6 @@ export class Grid extends Component {
 
         return columns;
     };
-
-    isLoading = () =>
-        this.props.loadingState && this.props.loadingState.isLoading
-            ? this.props.loadingState.isLoading
-            : false;
-
     addStyles = () => {
         const styleEl = document.createElement("style");
         const head = document.head || document.getElementsByTagName("head")[0];
@@ -421,8 +470,6 @@ export class Grid extends Component {
 
         head.appendChild(styleEl);
     };
-
-    getStore = () => this.context.store || this.props.store;
 }
 
 export default connect(mapStateToProps)(Grid);

@@ -1,70 +1,27 @@
-import { removeToolbar } from "@/actions/plugins/bulkactions/ToolbarActions";
-import {
-    deselectAll,
-    selectAll,
-} from "@/actions/plugins/selection/ModelActions";
 import { gridConfig } from "@/constants/GridConstants";
 import { isPluginEnabled } from "@/util/isPluginEnabled";
 import { keyFromObject } from "@/util/keyGenerator";
 import { prefix } from "@/util/prefix";
 import { stateGetter } from "@/util/stateGetter";
-import PropTypes from "prop-types";
-import { Component } from "react";
-import { connect } from "react-redux";
+import { useEffect, useRef } from "react";
+// import { connect } from "react-redux";
 
-class BulkActionToolbar extends Component {
-    render() {
-        const { bulkActionState, selectedRows, plugins } = this.props;
+export type BulkActionToolbarPrpops = {
+    bulkActionState: object;
+    dataSource: object;
+    plugins: object;
+    selectedRows: object;
+    selectionModel: object;
+    stateKey: string;
+    store: object;
+};
 
-        const toolbar =
-            isPluginEnabled(plugins, "BULK_ACTIONS") &&
-            plugins.BULK_ACTIONS.actions &&
-            plugins.BULK_ACTIONS.actions.length > 0 ? (
-                getToolbar(
-                    plugins.BULK_ACTIONS.actions,
-                    bulkActionState,
-                    selectedRows
-                )
-            ) : (
-                <div />
-            );
+export default (props: BulkActionToolbarPrpops) => {
+    const { bulkActionState, selectedRows, plugins } = props;
+    const timeOut = useRef<NodeJS.Timer>();
+    const { CLASS_NAMES } = gridConfig();
 
-        return toolbar;
-    }
-
-    componentDidUpdate() {
-        const { store, stateKey, bulkActionState, selectedRows } = this.props;
-        const isRemoved = bulkActionState && bulkActionState.isRemoved;
-        const totalCount = getTotalSelection(selectedRows);
-
-        if (bulkActionState) {
-            if (totalCount === 0 && !isRemoved) {
-                clearTimeout(this.removeTimeout);
-                this.removeTimeout = setTimeout(() => {
-                    store.dispatch(removeToolbar({ state: true, stateKey }));
-                }, 300);
-            } else if (totalCount > 0 && isRemoved) {
-                store.dispatch(removeToolbar({ state: false, stateKey }));
-            }
-        }
-    }
-
-    constructor() {
-        super();
-        this.removeTimeout = null;
-    }
-
-    static propTypes = {
-        bulkActionState: PropTypes.object,
-        dataSource: PropTypes.object,
-        plugins: PropTypes.object.isRequired,
-        selectedRows: PropTypes.object,
-        selectionModel: PropTypes.object.isRequired,
-        stateKey: PropTypes.string,
-        store: PropTypes.object.isRequired,
-    };
-
-    handleChange(reactEvent) {
+    const handleChange = (reactEvent) => {
         const { stateKey, store, dataSource } = this.props;
 
         if (reactEvent.target && reactEvent.target.checked) {
@@ -72,11 +29,8 @@ class BulkActionToolbar extends Component {
         } else {
             store.dispatch(deselectAll({ stateKey }));
         }
-    }
-}
-
-export const getTotalSelection = (selectedRows) => {
-    const count =
+    };
+    const getTotalSelection = (selectedRows) =>
         selectedRows && Object.keys(selectedRows).length
             ? Object.keys(selectedRows).filter(
                   (k) =>
@@ -84,52 +38,52 @@ export const getTotalSelection = (selectedRows) => {
               ).length
             : 0;
 
-    return count;
-};
+    useEffect(() => {
+        const { store, stateKey, bulkActionState, selectedRows } = this.props;
+        const isRemoved = bulkActionState && bulkActionState.isRemoved;
+        const totalCount = getTotalSelection(selectedRows);
 
-export const getToolbar = (actions, bulkActionState, selectedRows) => {
-    const { CLASS_NAMES } = gridConfig();
+        if (bulkActionState) {
+            if (totalCount === 0 && !isRemoved) {
+                timeOut.current && clearTimeout(timeOut.current);
+                timeOut.current = setTimeout(() => {
+                    store.dispatch(removeToolbar({ state: true, stateKey }));
+                }, 300);
+            } else if (totalCount > 0 && isRemoved) {
+                store.dispatch(removeToolbar({ state: false, stateKey }));
+            }
+        }
+    }, []);
     const totalCount = getTotalSelection(selectedRows);
 
-    const shownCls =
-        totalCount > 0
-            ? CLASS_NAMES.BULK_ACTIONS.SHOWN
-            : CLASS_NAMES.BULK_ACTIONS.HIDDEN;
-
-    const removedCls =
-        bulkActionState && bulkActionState.isRemoved ? "removed" : null;
-
-    const containerProps = {
-        className: prefix(
-            CLASS_NAMES.BULK_ACTIONS.CONTAINER,
-            shownCls,
-            removedCls
-        ),
-    };
-
-    const spanProps = {
-        className: prefix(CLASS_NAMES.BULK_ACTIONS.DESCRIPTION),
-        children: `${totalCount} Selected`,
-    };
-
-    const buttons = actions.map(getAction);
-
-    return (
-        <div {...containerProps}>
-            <span {...spanProps} />
-            {buttons}
+    return isPluginEnabled(plugins, "BULK_ACTIONS") &&
+        plugins.BULK_ACTIONS.actions &&
+        plugins.BULK_ACTIONS.actions.length > 0 ? (
+        <div
+            className={prefix(
+                CLASS_NAMES.BULK_ACTIONS.CONTAINER,
+                totalCount > 0
+                    ? CLASS_NAMES.BULK_ACTIONS.SHOWN
+                    : CLASS_NAMES.BULK_ACTIONS.HIDDEN, // shownCls
+                bulkActionState && bulkActionState.isRemoved ? "removed" : null // removedCls
+            )}
+        >
+            <span
+                className={prefix(CLASS_NAMES.BULK_ACTIONS.DESCRIPTION)}
+                children={`${totalCount} Selected`}
+            />
+            {plugins.BULK_ACTIONS.actions.map((action) => (
+                <button
+                    onClick={action.EVENT_HANDLER}
+                    key={keyFromObject(action)}
+                >
+                    {action.text}
+                </button>
+            ))}
         </div>
+    ) : (
+        <div />
     );
-};
-
-export const getAction = (action) => {
-    const buttonProps = {
-        children: action.text,
-        onClick: action.EVENT_HANDLER,
-        key: keyFromObject(action),
-    };
-
-    return <button {...buttonProps} />;
 };
 
 function mapStateToProps(state, props) {
@@ -145,4 +99,4 @@ function mapStateToProps(state, props) {
     };
 }
 
-export default connect(mapStateToProps)(BulkActionToolbar);
+// connect(mapStateToProps)(BulkActionToolbar);

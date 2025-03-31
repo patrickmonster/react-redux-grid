@@ -1,8 +1,6 @@
-import PropTypes from "prop-types";
-
-import { DragHandle } from "./column/DragHandle";
-import { SortHandle } from "./column/SortHandle";
-import { Text } from "./column/Text";
+import { DragHandle } from "@/components/layout/header/column/DragHandle";
+import { SortHandle } from "@/components/layout/header/column/SortHandle";
+import { Text } from "@/components/layout/header/column/Text";
 
 import { keyGenerator } from "@/util/keyGenerator";
 import { prefix } from "@/util/prefix";
@@ -21,6 +19,23 @@ const isChrome =
     /Chrome/.test(navigator.userAgent) &&
     /Google Inc/.test(navigator.vendor);
 
+export type ColumnProps = {
+    actualIndex: number;
+    col: object;
+    columnManager: object;
+    columns: Array<object>;
+    dataSource: object;
+    dragAndDropManager: object;
+    filterFields: object;
+    index: number;
+    pageSize: number;
+    pager: object;
+    scope: object;
+    stateKey: string;
+    stateful: boolean;
+    store: object;
+};
+
 export const Column = ({
     actualIndex,
     scope,
@@ -36,7 +51,7 @@ export const Column = ({
     stateKey,
     index,
     stateful,
-}) => {
+}: ColumnProps) => {
     if (col.hidden) {
         return false;
     }
@@ -184,23 +199,6 @@ export const Column = ({
             {dragHandle}
         </th>
     );
-};
-
-Column.propTypes = {
-    actualIndex: PropTypes.number,
-    col: PropTypes.object,
-    columnManager: PropTypes.object,
-    columns: PropTypes.arrayOf(PropTypes.object),
-    dataSource: PropTypes.object,
-    dragAndDropManager: PropTypes.object,
-    filterFields: PropTypes.object,
-    index: PropTypes.number,
-    pageSize: PropTypes.number,
-    pager: PropTypes.object,
-    scope: PropTypes.object,
-    stateKey: PropTypes.string,
-    stateful: PropTypes.bool,
-    store: PropTypes.object,
 };
 
 export const handleDrop = (

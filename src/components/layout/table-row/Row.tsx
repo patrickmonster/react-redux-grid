@@ -1,24 +1,24 @@
-import PropTypes from 'prop-types';
-import React, { Component } from 'react';
-import { findDOMNode } from 'react-dom';
-import { DragSource, DropTarget } from 'react-dnd';
-import { isPluginEnabled } from '../../../util/isPluginEnabled';
+import { isPluginEnabled } from "@/util/isPluginEnabled";
+import PropTypes from "prop-types";
+import { Component } from "react";
+import { DragSource, DropTarget } from "react-dnd";
+import { findDOMNode } from "react-dom";
 
-import { Cell } from './row/Cell';
-import { EmptyCell } from './row/EmptyCell';
-import RowContainer from './row/RowContainer';
+import { Cell } from "@/components/layout/table-row/row/Cell";
+import { EmptyCell } from "@/components/layout/table-row/row/EmptyCell";
+import RowContainer from "@/components/layout/table-row/row/RowContainer";
 
-import { prefix } from '../../../util/prefix';
-import { fireEvent } from '../../../util/fire';
-import { getData, getRowKey } from '../../../util/getData';
-import { gridConfig } from '../../../constants/GridConstants';
+import { gridConfig } from "@/constants/GridConstants";
+import { fireEvent } from "@/util/fire";
+import { getData, getRowKey } from "@/util/getData";
+import { prefix } from "@/util/prefix";
 
-const { arrayOf, bool, func, object, string, oneOf, number, oneOfType } = PropTypes;
+const { arrayOf, bool, func, object, string, oneOf, number, oneOfType } =
+    PropTypes;
 
 const DRAG_INCREMENT = 15;
 
 export class Row extends Component {
-
     render() {
         const { CLASS_NAMES } = gridConfig();
         const {
@@ -44,10 +44,10 @@ export class Row extends Component {
             stateful,
             stateKey,
             store,
-            treeData
+            treeData,
         } = this.props;
 
-        const id = row.get('_key');
+        const id = row.get("_key");
 
         const visibleColumns = columns.filter((col) => !col.hidden);
         const cellValues = getCellValues(columns, row);
@@ -56,19 +56,22 @@ export class Row extends Component {
             addEmptyCells(row, columns);
         }
 
-        const isSelected = selectedRows
-            ? selectedRows.get(id)
-            : false;
+        const isSelected = selectedRows ? selectedRows.get(id) : false;
 
         const cells = Object.keys(cellValues).map((k, i) => {
-
             const key = getRowKey(columns, row, columns[i].dataIndex);
             const cellData = getCellData(
-                columns, editor, editorState, row, k, i, store
+                columns,
+                editor,
+                editorState,
+                row,
+                k,
+                i,
+                store
             );
             const cellTreeData = {
                 ...treeData,
-                expandable: columns[i].expandable
+                expandable: columns[i].expandable,
             };
 
             return (
@@ -82,7 +85,7 @@ export class Row extends Component {
                     gridType={gridType}
                     index={i}
                     isRowSelected={isSelected}
-                    key={ key }
+                    key={key}
                     readFunc={readFunc}
                     reducerKeys={reducerKeys}
                     row={cellValues}
@@ -94,23 +97,20 @@ export class Row extends Component {
                     stateful={stateful}
                     store={store}
                     treeData={cellTreeData}
-                />);
-
+                />
+            );
         });
 
-        const editClass = editorState
-            && editorState.get(id)
-            && editor.config.type !== 'grid'
-            ? selectionModel.defaults.editCls
-            : '';
+        const editClass =
+            editorState && editorState.get(id) && editor.config.type !== "grid"
+                ? selectionModel.defaults.editCls
+                : "";
 
         const selectedClass = isSelected
             ? selectionModel.defaults.activeCls
-            : '';
+            : "";
 
-        const dragClass = isDragging
-            ? CLASS_NAMES.ROW_IS_DRAGGING
-            : '';
+        const dragClass = isDragging ? CLASS_NAMES.ROW_IS_DRAGGING : "";
 
         const rowProps = {
             className: prefix(
@@ -121,56 +121,66 @@ export class Row extends Component {
             ),
             onClick: (e) => {
                 handleRowSingleClickEvent(
-                    events, row, id, selectionModel, index, isSelected, e
+                    events,
+                    row,
+                    id,
+                    selectionModel,
+                    index,
+                    isSelected,
+                    e
                 );
             },
             onDoubleClick: (e) => {
                 handleRowDoubleClickEvent(
-                    events, row, id, selectionModel, index, isSelected, e
+                    events,
+                    row,
+                    id,
+                    selectionModel,
+                    index,
+                    isSelected,
+                    e
                 );
             },
-            onDragStart: this.handleDragStart.bind(this)
+            onDragStart: this.handleDragStart.bind(this),
         };
 
         columnManager.addActionColumn({
             cells,
             columns,
-            type: 'row',
+            type: "row",
             id,
             reducerKeys,
             rowData: row,
             rowIndex: index,
             stateKey,
-            menuState
+            menuState,
         });
 
         selectionModel.updateCells({
             cells,
             rowId: id,
             index,
-            type: 'row',
+            type: "row",
             reducerKeys,
             stateKey,
             rowData: cellValues,
-            isSelected: !isSelected
+            isSelected: !isSelected,
         });
 
         addEmptyInsert(cells, visibleColumns, plugins, id);
 
         let rowEl;
 
-        if (isPluginEnabled(plugins, 'ROW') &&
-          typeof plugins.ROW.renderer === 'function') {
-        	// super important that we pass rowProps and cells
-        	// since the user is almost certainly going to want both
-        	// lets make sure this gets documented
+        if (
+            isPluginEnabled(plugins, "ROW") &&
+            typeof plugins.ROW.renderer === "function"
+        ) {
+            // super important that we pass rowProps and cells
+            // since the user is almost certainly going to want both
+            // lets make sure this gets documented
             rowEl = plugins.ROW.renderer({ rowProps, cells, row });
         } else {
-            rowEl = (
-                <tr { ...rowProps }>
-                    { cells }
-                </tr>
-            );
+            rowEl = <tr {...rowProps}>{cells}</tr>;
         }
 
         if (dragAndDrop) {
@@ -197,9 +207,7 @@ export class Row extends Component {
         emptyDataMessage: string,
         events: object,
         findRow: func.isRequired,
-        gridType: oneOf([
-            'tree', 'grid'
-        ]),
+        gridType: oneOf(["tree", "grid"]),
         index: number,
         isDragging: bool,
         menuState: object,
@@ -217,14 +225,14 @@ export class Row extends Component {
         stateKey: string,
         stateful: bool,
         store: object.isRequired,
-        treeData: object
+        treeData: object,
     };
 
     static defaultProps = {
-        connectDragSource: i => i,
-        connectDropTarget: i => i,
-        emptyDataMessage: 'No Data Available',
-        treeData: {}
+        connectDragSource: (i) => i,
+        connectDropTarget: (i) => i,
+        emptyDataMessage: "No Data Available",
+        treeData: {},
     };
 
     handleDragStart(e) {
@@ -233,10 +241,13 @@ export class Row extends Component {
         // this has nothing to do with grid drag and drop
         // only use is setting meta data for custom drop events
         // per issue #59
-        e.dataTransfer.setData('text/plain', JSON.stringify({
-            id: row.get('_key'),
-            data: row.toJS()
-        }));
+        e.dataTransfer.setData(
+            "text/plain",
+            JSON.stringify({
+                id: row.get("_key"),
+                data: row.toJS(),
+            })
+        );
 
         return e;
     }
@@ -244,9 +255,9 @@ export class Row extends Component {
 
 export const getCellValues = (columns, row) => {
     const result = {};
-    const dataIndexes = columns.map(col => col.dataIndex);
+    const dataIndexes = columns.map((col) => col.dataIndex);
 
-    dataIndexes.forEach(idx => {
+    dataIndexes.forEach((idx) => {
         result[idx] = row.get(idx);
     });
 
@@ -254,18 +265,16 @@ export const getCellValues = (columns, row) => {
 };
 
 export const addEmptyInsert = (cells, visibleColumns, plugins, id) => {
-
     if (visibleColumns.length === 0) {
-
-        if (plugins
-            && plugins.GRID_ACTIONS
-            && plugins.GRID_ACTIONS.menu
-            && plugins.GRID_ACTIONS.menu.length > 0) {
-            cells.splice(1, 0, <EmptyCell { ...{ key: `${id}-Grid-Action` } } />);
-        }
-
-        else {
-            cells.push(<EmptyCell { ...{ key: `${id}-Empty-Cell`} } />);
+        if (
+            plugins &&
+            plugins.GRID_ACTIONS &&
+            plugins.GRID_ACTIONS.menu &&
+            plugins.GRID_ACTIONS.menu.length > 0
+        ) {
+            cells.splice(1, 0, <EmptyCell {...{ key: `${id}-Grid-Action` }} />);
+        } else {
+            cells.push(<EmptyCell {...{ key: `${id}-Empty-Cell` }} />);
         }
     }
 
@@ -273,35 +282,41 @@ export const addEmptyInsert = (cells, visibleColumns, plugins, id) => {
 };
 
 export const getCellData = (
-    columns, editor, editorState, row, key, index, store
+    columns,
+    editor,
+    editorState,
+    row,
+    key,
+    index,
+    store
 ) => {
-
-    const rowId = row.get('_key');
+    const rowId = row.get("_key");
 
     // if a renderer is present, but
     // were in edited mode, we should use the edited values
     // since those could be modified using a 'change' function
-    const editedValues = editorState
-        && editorState.get(rowId)
-        && editorState.get(rowId).values
-        ? editorState.get(rowId).values
-        : new Map();
+    const editedValues =
+        editorState && editorState.get(rowId) && editorState.get(rowId).values
+            ? editorState.get(rowId).values
+            : new Map();
 
     const valueAtDataIndex = getData(row, columns, index, editedValues);
 
     // if a render has been provided, default to this
     // as long as editor type isnt 'grid'
-    if (row
-        && columns[index]
-        && columns[index].renderer
-        && typeof columns[index].renderer === 'function') {
+    if (
+        row &&
+        columns[index] &&
+        columns[index].renderer &&
+        typeof columns[index].renderer === "function"
+    ) {
         return columns[index].renderer({
             column: columns[index],
             value: valueAtDataIndex,
             row: row.toJS(),
             key,
             index,
-            store
+            store,
         });
     }
 
@@ -315,18 +330,15 @@ export const getCellData = (
 };
 
 export const addEmptyCells = (row, columns) => {
-
     columns.forEach((col) => {
-
         // const data = nameFromDataIndex(col);
         // come back to this
         // how we retrieve and store data, especially editable
         // may need to be updated based on array dataIndex
 
         if (row && !row.get(col.dataIndex)) {
-            row.set(col.dataIndex, '');
+            row.set(col.dataIndex, "");
         }
-
     });
 
     return row;
@@ -343,41 +355,42 @@ export const handleRowDoubleClickEvent = (
     id,
     browserEvent
 ) => {
-    if (selectionModel
-            && selectionModel.defaults.selectionEvent
-                === selectionModel.eventTypes.doubleclick) {
-
+    if (
+        selectionModel &&
+        selectionModel.defaults.selectionEvent ===
+            selectionModel.eventTypes.doubleclick
+    ) {
         selectionModel.handleSelectionEvent({
             eventType: reactEvent.type,
             eventData: reactEvent,
             id: rowId,
             index,
             data: row,
-            selected: !isSelected
+            selected: !isSelected,
         });
     }
 
     fireEvent(
-        'HANDLE_ROW_DOUBLE_CLICK',
+        "HANDLE_ROW_DOUBLE_CLICK",
         events,
         {
             id,
             isSelected,
             row,
-            rowId
+            rowId,
         },
         browserEvent
     );
-
 };
 
 export const getSelectedText = () => {
-    let text = '';
-    if (typeof window.getSelection !== 'undefined') {
+    let text = "";
+    if (typeof window.getSelection !== "undefined") {
         text = window.getSelection().toString();
-    }
-    else if (typeof document.selection !== 'undefined'
-        && document.selection.type === 'Text') {
+    } else if (
+        typeof document.selection !== "undefined" &&
+        document.selection.type === "Text"
+    ) {
         text = document.selection.createRange().text;
     }
     return text;
@@ -394,18 +407,17 @@ export const handleRowSingleClickEvent = (
     id,
     browserEvent
 ) => {
-
     if (getSelectedText()) {
         return false;
     }
 
     const beforeRowSingleClick = fireEvent(
-        'HANDLE_BEFORE_ROW_CLICK',
+        "HANDLE_BEFORE_ROW_CLICK",
         events,
         {
             row,
             rowId,
-            id
+            id,
         },
         browserEvent
     );
@@ -414,29 +426,30 @@ export const handleRowSingleClickEvent = (
         return;
     }
 
-    if (selectionModel
-            && selectionModel.defaults.selectionEvent
-                === selectionModel.eventTypes.singleclick) {
-
+    if (
+        selectionModel &&
+        selectionModel.defaults.selectionEvent ===
+            selectionModel.eventTypes.singleclick
+    ) {
         selectionModel.handleSelectionEvent({
             eventType: reactEvent.type,
             eventData: reactEvent,
             id: rowId,
             index,
             data: row,
-            selected: !isSelected
+            selected: !isSelected,
         });
     }
 
     fireEvent(
-        'HANDLE_ROW_CLICK',
+        "HANDLE_ROW_CLICK",
         events,
         {
             id,
             isSelected,
             row,
             rowId,
-            rowOndex: index
+            rowOndex: index,
         },
         browserEvent
     );
@@ -446,10 +459,10 @@ const rowSource = {
     beginDrag({ getTreeData, row }) {
         return {
             getTreeData,
-            _id: row.get('_id'),
-            _index: row.get('_index'),
-            _parentId: row.get('_parentId'),
-            _path: row.get('_path')
+            _id: row.get("_id"),
+            _index: row.get("_index"),
+            _parentId: row.get("_parentId"),
+            _path: row.get("_path"),
         };
     },
     endDrag({ getTreeData, moveRow }, monitor) {
@@ -462,16 +475,15 @@ const rowSource = {
                 { index: _index, parentId: _parentId, path: _path }
             );
         }
-    }
+    },
 };
 
 const rowTarget = {
     hover(props, monitor, component) {
-
         const {
             events: hoverEvents,
             row: hoverRow,
-            previousRow: hoverPreviousRow
+            previousRow: hoverPreviousRow,
         } = props;
 
         const {
@@ -480,14 +492,10 @@ const rowTarget = {
             isExpanded: hoverIsExpanded,
             parentId: hoverParentId,
             path: hoverPath,
-            flatIndex: hoverFlatIndex
+            flatIndex: hoverFlatIndex,
         } = props.treeData;
 
-        const {
-            lastX,
-            getTreeData,
-            row
-        } = monitor.getItem();
+        const { lastX, getTreeData, row } = monitor.getItem();
 
         const {
             id,
@@ -498,7 +506,7 @@ const rowTarget = {
             flatIndex,
             parentIndex,
             previousSiblingTotalChildren,
-            previousSiblingId
+            previousSiblingId,
         } = getTreeData();
 
         const path = [...getTreeData().path.toJS()];
@@ -518,13 +526,12 @@ const rowTarget = {
         }
 
         // Determine rectangle on screen
-        const hoverBoundingRect = findDOMNode(component)
-            .getBoundingClientRect();
+        const hoverBoundingRect =
+            findDOMNode(component).getBoundingClientRect();
 
         // Get vertical middle
-        const hoverMiddleY = (
-            hoverBoundingRect.bottom - hoverBoundingRect.top
-        ) / 2;
+        const hoverMiddleY =
+            (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
 
         // Determine mouse position
         const clientOffset = monitor.getClientOffset();
@@ -536,7 +543,6 @@ const rowTarget = {
         // if hover occurs over the grabbed row, we need to determine
         // if X position indicates left or right
         if (hoverIndex === index && parentId === hoverParentId) {
-
             // if a previous X position hasn't been set
             // set, and early return for next hover event
             if (!lastX) {
@@ -545,10 +551,11 @@ const rowTarget = {
             }
 
             // X position indicates a move to left
-            else if (lastX - DRAG_INCREMENT > mouseX
-                && parentId !== -1
-                && isLastChild) {
-
+            else if (
+                lastX - DRAG_INCREMENT > mouseX &&
+                parentId !== -1 &&
+                isLastChild
+            ) {
                 targetParentId = path[path.length - 2];
                 targetIndex = (parentIndex || 0) + 1;
                 targetPath.pop();
@@ -556,13 +563,12 @@ const rowTarget = {
 
             // X position indicates a move to right
             else if (lastX + DRAG_INCREMENT < mouseX && !isFirstChild) {
-
                 const validDrop = fireEvent(
-                    'HANDLE_BEFORE_TREE_CHILD_CREATE',
+                    "HANDLE_BEFORE_TREE_CHILD_CREATE",
                     hoverEvents,
                     {
                         row,
-                        previousRow: hoverPreviousRow
+                        previousRow: hoverPreviousRow,
                     },
                     null
                 );
@@ -580,9 +586,7 @@ const rowTarget = {
             else {
                 return;
             }
-
-        }
-        else {
+        } else {
             // Only perform the move when the mouse
             // has crossed half of the items height
             // When dragging downwards, only move when the cursor is below 50%
@@ -602,11 +606,11 @@ const rowTarget = {
             // instead of placing it as a sibling below hovered item
             if (flatIndex < hoverFlatIndex && hoverIsExpanded) {
                 const validDrop = fireEvent(
-                    'HANDLE_BEFORE_TREE_CHILD_CREATE',
+                    "HANDLE_BEFORE_TREE_CHILD_CREATE",
                     hoverEvents,
                     {
                         row,
-                        hoverRow
+                        hoverRow,
                     },
                     null
                 );
@@ -632,28 +636,29 @@ const rowTarget = {
     drop(props, monitor) {
         const { events, getTreeData, findRow } = props;
         const { _id } = monitor.getItem();
-        const row = findRow(data => data.get('_id') === _id);
+        const row = findRow((data) => data.get("_id") === _id);
 
         if (row) {
             fireEvent(
-                'HANDLE_AFTER_ROW_DROP',
+                "HANDLE_AFTER_ROW_DROP",
                 events,
                 {
                     row,
-                    ...getTreeData()
+                    ...getTreeData(),
                 },
                 null
             );
         }
-    }
-
+    },
 };
 
-export default RowContainer(DropTarget('ROW', rowTarget, connect => ({
-    connectDropTarget: connect.dropTarget()
-}))(
-    DragSource('ROW', rowSource, (connect, monitor) => ({
-        connectDragSource: connect.dragSource(),
-        isDragging: monitor.isDragging()
-    }))(Row)
-));
+export default RowContainer(
+    DropTarget("ROW", rowTarget, (connect) => ({
+        connectDropTarget: connect.dropTarget(),
+    }))(
+        DragSource("ROW", rowSource, (connect, monitor) => ({
+            connectDragSource: connect.dragSource(),
+            isDragging: monitor.isDragging(),
+        }))(Row)
+    )
+);

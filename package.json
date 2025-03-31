@@ -38,8 +38,8 @@
     "deep-equal": "^2.2.3",
     "immutable": "^3.8.1",
     "prop-types": "^15.8.1",
-    "react-dnd": "^2.2.4",
-    "react-dnd-html5-backend": "^2.1.2",
+    "react-dnd": "^16.0.1",
+    "react-dnd-html5-backend": "^16.0.1",
     "redux-thunk": "^2.2.0"
   },
   "peerDependencies": {
