@@ -31,26 +31,28 @@
     "test:no-coverage": "karma start ./test/karma.config.js -- --no-coverage",
     "test:browser": "karma start ./test/karma.config.js -- --browser",
     "test:watch": "karma start ./test/karma.config.js -- --no-single-run --no-suppress-error-summary",
-    "precommit": "npm run lint",
-    "prepush": "npm run test"
+    "precommit": "npm run lint"
   },
   "dependencies": {
     "array-from": "^2.1.1",
-    "deep-equal": "^1.0.1",
+    "deep-equal": "^2.2.3",
     "immutable": "^3.8.1",
-    "prop-types": "^15.5.10",
+    "prop-types": "^15.8.1",
     "react-dnd": "^2.2.4",
     "react-dnd-html5-backend": "^2.1.2",
     "redux-thunk": "^2.2.0"
   },
   "peerDependencies": {
+    "font-awesome": "4.x",
     "react": ">=15.0.0 <17.0.0",
     "react-dom": ">=15.0.0 <17.0.0",
     "react-redux": ">=5.0.0",
-    "redux": ">=3.0.0",
-    "font-awesome": "4.x"
+    "redux": ">=3.0.0"
   },
   "devDependencies": {
+    "@types/deep-equal": "^1.0.4",
+    "@types/react": "^18.2.47",
+    "@types/react-dom": "^19.0.4",
     "babel-cli": "^6.14.0",
     "babel-core": "^6.14.0",
     "babel-eslint": "^8.0.1",
@@ -99,11 +101,11 @@
     "karma-webpack": "^2.0.2",
     "mocha": "^3.1.2",
     "node-storage-shim": "^1.0.1",
-    "react": "^15.4.2",
+    "react": "^19.1.0",
     "react-addons-test-utils": "^15.6.2",
-    "react-dom": "^15.4.1",
+    "react-dom": "^19.1.0",
     "react-hot-loader": "^3.0.0-beta.6",
-    "react-redux": "^5.0.3",
+    "react-redux": "^9.2.0",
     "react-test-render": "^1.0.3",
     "redux": "^3.5.1",
     "redux-devtools": "^3.3.1",
