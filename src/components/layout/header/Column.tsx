@@ -9,7 +9,7 @@ import {
     gridConfig,
     SORT_DIRECTIONS,
     SORT_METHODS,
-} from "@/constants/GridConstants.js";
+} from "@/constants/GridConstants";
 
 import { reorderColumn } from "@/actions/core/ColumnManager";
 import { setSortDirection } from "@/actions/GridActions";

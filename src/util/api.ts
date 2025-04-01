@@ -1,4 +1,22 @@
-export const Api = (config) => {
+type ApiConfig = {
+    method?: string;
+    route: string;
+    data?: any;
+    headers?: { [key: string]: string };
+    queryStringParams?: { [key: string]: any };
+};
+type ApiResponse = {
+    status: number;
+    statusText: string;
+    data: any;
+};
+type ApiError = {
+    status: number;
+    statusText: string;
+    message: string;
+};
+
+export const Api = (config: ApiConfig) => {
     const promise = new Promise((resolve) => {
         if (!config.method) {
             config.method = "GET";
@@ -9,14 +27,11 @@ export const Api = (config) => {
         }
 
         const request = new XMLHttpRequest();
-
         config.route = buildQueryString(config).route;
 
         request.open(config.method, config.route, true);
-
         setRequestHeaders(request, config);
-
-        addAjaxEvents(request, config, resolve);
+        addAjaxEvents(request, resolve);
 
         request.send(config.data || null);
     });
@@ -24,7 +39,10 @@ export const Api = (config) => {
     return promise;
 };
 
-export const setRequestHeaders = (request = {}, config = {}) => {
+export const setRequestHeaders = (
+    request: XMLHttpRequest,
+    config: Partial<ApiConfig> = {}
+) => {
     if (!config.headers || !config.headers.contentType) {
         request.setRequestHeader(
             "Content-Type",
@@ -41,10 +59,12 @@ export const setRequestHeaders = (request = {}, config = {}) => {
     }
 };
 
-export const addAjaxEvents = (request, config, resolver) => {
+export const addAjaxEvents = (request: XMLHttpRequest, resolver: Function) => {
     const getResponse = () => {
         try {
-            resolver(JSON.parse(request.responseText));
+            const response = JSON.parse(request.responseText);
+
+            resolver(response);
         } catch (e) {
             /* eslint-disable no-console */
             console.log(e);
@@ -52,26 +72,18 @@ export const addAjaxEvents = (request, config, resolver) => {
         }
     };
 
-    request.addEventListener(
-        "load",
-        getResponse.bind(config.onSuccess, config.onSuccess)
-    );
+    request.addEventListener("load", getResponse);
 };
 
-export const buildQueryString = (config = {}) => {
+export const buildQueryString = (config: ApiConfig) => {
     const ret = {
-        route: config.route + "?" + "_dc=" + Date.now() + "&",
+        route: `${config.route}?_dc=${Date.now()}&`, // cache buster
     };
 
-    if (!config.queryStringParams) {
-        return ret;
-    }
-
-    for (const key of Object.keys(config.queryStringParams)) {
-        if (config.queryStringParams[key]) {
-            ret.route += key + "=" + config.queryStringParams[key] + "&";
-        }
-    }
+    if (!config.queryStringParams) return ret;
+    for (const key of Object.keys(config.queryStringParams))
+        if (config.queryStringParams[key])
+            ret.route += `${key}=${config.queryStringParams[key]}&`;
 
     return ret;
 };

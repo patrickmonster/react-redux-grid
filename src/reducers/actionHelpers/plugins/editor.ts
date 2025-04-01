@@ -1,27 +1,27 @@
-import { fromJS, Map, List } from 'immutable';
+import { fromJS, List, Map } from "immutable";
 
-import { Editor } from './../../../records';
-import { generateLastUpdate } from './../../../util/lastUpdate';
+import { Editor } from "@/records";
+import { generateLastUpdate } from "@/util/lastUpdate";
 
 import {
     getData,
+    nameFromDataIndex,
     setDataAtDataIndex,
     setKeysInData,
-    nameFromDataIndex
-} from './../../../util/getData';
+} from "@/util/getData";
 
-export const editRow = (state, {
-    columns, editMode, rowIndex, rowId, stateKey, top, isCreate, values
-}) => {
-
+export const editRow = (
+    state,
+    { columns, editMode, rowIndex, rowId, stateKey, top, isCreate, values }
+) => {
     if (!values.toJS) {
         values = fromJS(values);
     }
 
     const { invalidCells, isValid } = isRowValid(columns, values);
 
-    let overrides = state.getIn([stateKey, rowId, 'overrides'])
-        ? state.getIn([stateKey, rowId, 'overrides'])
+    let overrides = state.getIn([stateKey, rowId, "overrides"])
+        ? state.getIn([stateKey, rowId, "overrides"])
         : new Map();
 
     columns.forEach((col, i) => {
@@ -34,45 +34,53 @@ export const editRow = (state, {
         }
 
         overrides = overrides.setIn(
-            [dataIndex, 'disabled'],
+            [dataIndex, "disabled"],
             setDisabled(col, val, values)
         );
     });
 
-    const operation = editMode === 'inline'
-        ? 'setIn'
-        : 'mergeIn';
+    const operation = editMode === "inline" ? "setIn" : "mergeIn";
 
-    return state[operation]([stateKey], fromJS({
-        [rowId]: new Editor({
-            key: rowId,
-            values: fromJS(values),
-            rowIndex,
-            top,
-            valid: isValid,
-            invalidCells,
-            isCreate: isCreate || false,
-            overrides: overrides
-        }),
-        lastUpdate: generateLastUpdate()
-    }));
-
+    return state[operation](
+        [stateKey],
+        fromJS({
+            [rowId]: new Editor({
+                key: rowId,
+                values: fromJS(values),
+                rowIndex,
+                top,
+                valid: isValid,
+                invalidCells,
+                isCreate: isCreate || false,
+                overrides: overrides,
+            }),
+            lastUpdate: generateLastUpdate(),
+        })
+    );
 };
 
+/**
+ *
+ * @param state
+ * @param param1
+ * @returns
+ */
 export const setData = (state, { data, editMode, stateKey }) => {
-    if (editMode === 'grid') {
-
+    if (editMode === "grid") {
         const keyedData = setKeysInData(data);
         const editorData = keyedData.reduce((prev, curr, i) => {
-            return prev.set(curr.get('_key'), new Editor({
-                key: curr.get('_key'),
-                values: curr,
-                rowIndex: i,
-                top: null,
-                valid: null,
-                isCreate: false,
-                overrides: Map()
-            }));
+            return prev.set(
+                curr.get("_key"),
+                new Editor({
+                    key: curr.get("_key"),
+                    values: curr,
+                    rowIndex: i,
+                    top: null,
+                    valid: null,
+                    isCreate: false,
+                    overrides: Map(),
+                })
+            );
         }, Map({ lastUpdate: generateLastUpdate() }));
 
         return state.mergeIn([stateKey], editorData);
@@ -81,10 +89,10 @@ export const setData = (state, { data, editMode, stateKey }) => {
     return state;
 };
 
-export const rowValueChange = (state, {
-    column, columns, value, rowId, stateKey
-}) => {
-
+export const rowValueChange = (
+    state,
+    { column, columns, value, rowId, stateKey }
+) => {
     const colTriggeringChange = nameFromDataIndex(column);
     const previousEditorState = state.getIn([stateKey, rowId]);
     const previousValues = previousEditorState
@@ -95,9 +103,7 @@ export const rowValueChange = (state, {
         ? previousEditorState.overrides
         : new Map();
 
-    let rowValues = setDataAtDataIndex(
-        previousValues, column.dataIndex, value
-    );
+    let rowValues = setDataAtDataIndex(previousValues, column.dataIndex, value);
 
     columns.forEach((col, i) => {
         const val = getData(rowValues, columns, i);
@@ -112,10 +118,14 @@ export const rowValueChange = (state, {
         );
 
         // setting default value
-        if (col.defaultValue !== undefined
-            && val === undefined || val === null) {
+        if (
+            (col.defaultValue !== undefined && val === undefined) ||
+            val === null
+        ) {
             rowValues = setDataAtDataIndex(
-                rowValues, dataIndex, col.defaultValue
+                rowValues,
+                dataIndex,
+                col.defaultValue
             );
         }
 
@@ -129,7 +139,8 @@ export const rowValueChange = (state, {
         }
 
         overrides = overrides.setIn(
-            [dataIndex, 'disabled'], setDisabled(col, val, rowValues)
+            [dataIndex, "disabled"],
+            setDisabled(col, val, rowValues)
         );
     });
 
@@ -141,15 +152,12 @@ export const rowValueChange = (state, {
         previousValues: record.values,
         valid: isValid,
         invalidCells,
-        overrides
+        overrides,
     });
 
     state = state.setIn([stateKey, rowId], updated);
 
-    return state.setIn(
-        [stateKey, 'lastUpdate'],
-        generateLastUpdate()
-    );
+    return state.setIn([stateKey, "lastUpdate"], generateLastUpdate());
 };
 
 export const repositionEditor = (state, { rowId, stateKey, top }) => {
@@ -157,25 +165,19 @@ export const repositionEditor = (state, { rowId, stateKey, top }) => {
     const updated = record.merge({ top });
     const newState = state.mergeIn([stateKey, rowId], updated);
 
-    return newState.mergeIn(
-        [stateKey],
-        { lastUpdate: generateLastUpdate() }
-    );
+    return newState.mergeIn([stateKey], { lastUpdate: generateLastUpdate() });
 };
 
-export const removeEditorState = (state, { stateKey }) => state.setIn(
-    [stateKey],
-    fromJS({ lastUpdate: generateLastUpdate() }));
+export const removeEditorState = (state, { stateKey }) =>
+    state.setIn([stateKey], fromJS({ lastUpdate: generateLastUpdate() }));
 
 // helpers
 export const isCellValid = ({ validator }, value, values) => {
-    if (!validator || !typeof validator === 'function') {
+    if (!validator || !typeof validator === "function") {
         return true;
     }
 
-    const vals = values && values.toJS
-        ? values.toJS()
-        : values;
+    const vals = values && values.toJS ? values.toJS() : values;
 
     return validator({ value, values: vals });
 };
@@ -185,7 +187,6 @@ export const isRowValid = (columns, rowValues) => {
     let isValid = true;
 
     for (let i = 0; i < columns.length; i++) {
-
         const col = columns[i];
         const val = isCellValid(col, getData(rowValues, columns, i), rowValues);
 
@@ -201,42 +202,33 @@ export const isRowValid = (columns, rowValues) => {
 };
 
 export const setDisabled = (col = {}, value, values) => {
-
-    if (col.disabled === true || col.disabled === 'false') {
+    if (col.disabled === true || col.disabled === "false") {
         return col.disabled;
     }
 
-    if (typeof col.disabled === 'function') {
-
-        const vals = values && values.toJS
-            ? values.toJS()
-            : values;
+    if (typeof col.disabled === "function") {
+        const vals = values && values.toJS ? values.toJS() : values;
 
         return col.disabled({
             column: col,
             value,
-            values: vals
+            values: vals,
         });
     }
 
     return false;
-
 };
 
 export const handleChangeFunc = (col, rowValues, colTriggeringChange) => {
+    const vals = rowValues && rowValues.toJS ? rowValues.toJS() : rowValues;
 
-    const vals = rowValues
-        && rowValues.toJS
-        ? rowValues.toJS()
-        : rowValues;
-
-    if (!col.change || !typeof col.change === 'function') {
+    if (!col.change || !typeof col.change === "function") {
         return vals;
     }
 
     const overrideValue = col.change({ values: vals, eventSource: col }) || {};
 
-    Object.keys(overrideValue).forEach(k => {
+    Object.keys(overrideValue).forEach((k) => {
         // if the change is originating
         // from a the column that we want to override
         // ignore that specific change value

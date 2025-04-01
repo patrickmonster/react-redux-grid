@@ -6,7 +6,14 @@ import { nameFromDataIndex } from "@/util/getData";
 import { keyFromObject } from "@/util/keyGenerator";
 import sorter from "@/util/sorter";
 
-export default class ColumnManager {
+export interface ColumnManagerProps {}
+
+/**
+ * 컬럼 매니저
+ */
+export default (props: ColumnManagerProps) => {};
+
+export class ColumnManager {
     init({ plugins, store, events, selModel, editor, columns, dataSource }) {
         const visibleColumns = columns.filter((col) => !col.hidden);
 

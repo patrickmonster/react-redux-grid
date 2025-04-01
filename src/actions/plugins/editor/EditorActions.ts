@@ -14,119 +14,130 @@ import {
 import { getNewRowId } from "@/util/getNewRowId";
 import { keyGenerator } from "@/util/keyGenerator";
 
-export const editRow = ({
-    rowId,
-    top,
-    rowData = {},
-    rowIndex,
-    columns,
-    isCreate,
-    stateKey,
-    editMode = "inline",
+type RowId = string | number;
+type RowIndex = number;
+
+export const editRow = (data: {
+    rowId: RowId;
+    top: number;
+    rowData: any;
+    rowIndex: number;
+    columns: any;
+    isCreate: boolean;
+    stateKey: string;
+    editMode: string;
 }) => {
-    if (!rowId) {
+    if (!data.rowId) {
         throw new Error("rowId is a required parameter for editRow Action");
     }
 
     return {
         type: EDIT_ROW,
-        rowId,
-        top,
-        values: rowData,
-        rowIndex,
-        columns,
-        isCreate,
-        stateKey,
-        editMode,
+        ...data,
+        rowData: null,
+        editMode: data.editMode || "inline",
     };
 };
 
-export const repositionEditor = ({ top, stateKey, rowId }) => ({
+export const repositionEditor = (data: {
+    top: number;
+    stateKey: string;
+    rowId: RowId;
+}) => ({
+    ...data,
     type: REPOSITION_EDITOR,
-    rowId,
-    stateKey,
-    top,
 });
 
-export const dismissEditor = ({ stateKey }) => ({
+export const dismissEditor = ({ stateKey }: { stateKey: string }) => ({
     type: DISMISS_EDITOR,
     stateKey,
 });
 
-export const updateCellValue = ({
-    value,
-    name,
-    column,
-    columns,
-    stateKey,
-    rowId,
+export const updateCellValue = (data: {
+    value: any;
+    name: string;
+    column: any;
+    columns: any;
+    stateKey: string;
+    rowId: RowId;
 }) => ({
+    ...data,
+    name: null,
+    columnName: data.name,
     type: ROW_VALUE_CHANGE,
-    value,
-    columnName: name,
-    column,
-    columns,
-    stateKey,
-    rowId,
 });
 
-export const saveRow = ({ values, rowIndex, stateKey }) => ({
+export const saveRow = (data: {
+    values: any;
+    rowIndex: RowIndex;
+    stateKey: string;
+}) => ({
     type: SAVE_ROW,
-    values,
-    rowIndex,
-    stateKey,
+    ...data,
 });
 
-export const cancelRow = ({ stateKey }) => ({
+export const cancelRow = ({ stateKey }: { stateKey: string }) => ({
     type: CANCEL_ROW,
     stateKey,
 });
 
-export const removeRow = ({ rowIndex, stateKey }) => ({
+export const removeRow = (
+    data:
+        | {
+              rowIndex: RowIndex;
+              stateKey: string;
+          }
+        | { rowId: RowId; stateKey: string }
+) => ({
     type: REMOVE_ROW,
-    rowIndex,
-    stateKey,
+    ...data,
 });
 
-export const setEditorValidation = ({ validationState, stateKey }) => ({
+export const setEditorValidation = (data: {
+    validationState: string;
+    stateKey: string;
+}) => ({
     type: EDITOR_VALIDATION,
-    validationState,
-    stateKey,
+    ...data,
 });
 
-export const updateRow = ({ stateKey, rowIndex, values }) => ({
+export const updateRow = (data: {
+    stateKey: string;
+    rowIndex: RowIndex;
+    values: any;
+}) => ({
+    ...data,
     type: UPDATE_ROW,
-    stateKey,
-    rowIndex,
-    values,
 });
 
 export const addNewRow =
-    ({
-        columns,
-        data,
-        stateKey,
-        editMode = "inline",
-        rowIndex = 0,
-        isCreate = true,
+    (data: {
+        columns: any;
+        data: any;
+        stateKey: string;
+        editMode: string;
+        rowIndex: RowIndex;
+        isCreate: boolean;
     }) =>
-    (dispatch) => {
-        const rowId = keyGenerator("row", getNewRowId());
+    // TODO :   edit dispatch to use the newRowId
+    (dispatch: any) => {
+        const rowId = keyGenerator("row", `${getNewRowId()}`);
         const top = 43;
-        const rowData = data || {};
+        const rowData = data.data || {};
 
-        dispatch({ type: ADD_NEW_ROW, stateKey, rowId, rowIndex });
+        dispatch({
+            type: ADD_NEW_ROW,
+            stateKey: data.stateKey,
+            rowId,
+            rowIndex: data.rowIndex,
+        });
 
         dispatch(
             editRow({
                 rowId,
                 top,
                 rowData,
-                rowIndex,
-                columns,
-                isCreate,
-                stateKey,
-                editMode,
+                ...data,
             })
         );
     };

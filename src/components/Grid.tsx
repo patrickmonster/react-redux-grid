@@ -2,46 +2,56 @@ import deepEqual from "deep-equal";
 import {
     Component,
     createContext,
+    useCallback,
     useContext,
     useEffect,
+    useRef,
     useState,
 } from "react";
 import { connect } from "react-redux";
 
+import localStorageManager from "@/components/core/LocalStorageManager";
 import FixedHeader from "@/components/layout/FixedHeader";
 import TableContainer from "@/components/layout/TableContainer";
 import BulkActionToolbar from "@/components/plugins/bulkactions/Toolbar";
 import Message from "@/components/plugins/errorhandler/Message";
+import ActionColumn from "@/components/plugins/gridactions/ActionColumn";
 import LoadingBar from "@/components/plugins/loader/LoadingBar";
 import PagerToolbar from "@/components/plugins/pager/Pager";
-import { prefix } from "@/util/prefix";
 
-import { CLASS_NAMES, GRID_TYPES } from "@/constants/GridConstants";
+import {
+    CLASS_NAMES,
+    GRID_TYPES,
+    SORT_METHODS,
+} from "@/constants/GridConstants";
 
 import * as Action from "@/actions/GridActions";
-import localStorageManager from "@/components/core/LocalStorageManager";
+
 import { getColumnsFromStorage } from "@/util/getColumnsFromStorage";
-import { mapStateToProps } from "@/util/mapStateToProps";
-
-import styles from "@/style/main.styl";
 import { isPluginEnabled } from "@/util/isPluginEnabled";
+import { keyFromObject } from "@/util/keyGenerator";
+import { mapStateToProps } from "@/util/mapStateToProps";
+import { prefix } from "@/util/prefix";
 
-export type GridProps = {
+import { Column } from "@/type/columns";
+import { PluginType } from "@/type/grid";
+
+// import styles from "@/style/main.styl";
+
+export type GridProps<T> = {
     columnState?: {
         headerHidden?: boolean;
         columns?: object[];
         [key: string]: any;
     };
-    columns: object[];
-    data?: object[] | object;
-    dataSource?: any;
+    columns: Column[];
+    data?: T[] | T;
     dragAndDrop?: boolean;
     editorState?: object;
     emptyDataMessage?: any;
     events?: object;
     expandOnLoad?: boolean;
     filterFields?: object;
-    gridData?: object;
     gridType: GRID_TYPES;
     height: string | number | boolean;
     infinite?: boolean;
@@ -50,7 +60,7 @@ export type GridProps = {
     menuState?: object;
     pageSize: number;
     pager: object;
-    plugins: object;
+    plugins: PluginType;
     reducerKeys: object | string;
     selectedRows: object;
     showTreeRootNode?: boolean;
@@ -59,18 +69,21 @@ export type GridProps = {
     store: object;
 } & React.HTMLProps<HTMLDivElement>;
 
-const GridContext = createContext<{
-    store: any;
-}>({
-    store: null,
-});
+export const GridContext = createContext<
+    Partial<{
+        addActionColumn: (props: any) => void;
+        reload: () => void;
+        config: any;
+        plugins: { [key: string]: any };
+        events: { [key: string]: any };
+        columns: Column[];
+    }>
+>({});
 
-export const Grid = (props: GridProps) => {
+export const Grid = <T extends Object>(props: GridProps<T>) => {
     const {
         className,
         columnState,
-        dataSource,
-        gridData,
         height,
         infinite,
         pager,
@@ -88,6 +101,87 @@ export const Grid = (props: GridProps) => {
     const headerHidden = columnState ? columnState.headerHidden : false;
     const [_USING_DATA_ARRAY, setGridDataType] = useState(false);
 
+    // 컬럼 상태 보전
+    const store = useRef(null);
+
+    ////////////////////////////////////////////////////////
+
+    const reload = useCallback(() => {
+        const context = useContext(GridContext);
+        const visibleColumns = props.columns.filter((col) => !col.hidden);
+        context.config = {
+            defaultColumnWidth: `${100 / visibleColumns.length}%`,
+            minColumnWidth: 10,
+            moveable: false,
+            resizable: false,
+            headerActionItemBuilder: null,
+            sortable: {
+                enabled: true,
+                method: SORT_METHODS.LOCAL,
+                sortingSource:
+                    plugins?.COLUMN_MANAGER?.sortable?.sortingSource || "",
+            },
+
+            /**
+                            @private properties used by components
+                                if properties are not available
+                                i wouldn't remove these, but the
+                                values can be flipped
+                        **/
+            defaultResizable: false,
+            defaultSortable: true,
+        };
+    }, []);
+
+    const addActionColumn = useCallback(
+        ({
+            cells,
+            columns,
+            type,
+            id,
+            reducerKeys,
+            rowData,
+            rowIndex,
+            menuState,
+            stateKey,
+            stateful,
+        }) => {
+            const { GRID_ACTIONS } = plugins;
+            const cellsCopy = cells;
+
+            if (GRID_ACTIONS) {
+                cells.push(
+                    <ActionColumn
+                        actions={GRID_ACTIONS}
+                        {...{
+                            // store: this.store,
+                            type,
+                            columns: columns,
+                            rowId: id,
+                            rowData,
+                            rowIndex,
+                            editor: editor,
+                            reducerKeys,
+                            selModel: selModel,
+                            stateful,
+                            stateKey,
+                            menuState,
+                            gridState: columns,
+                            headerActionItemBuilder:
+                                config.headerActionItemBuilder,
+                            key: keyFromObject(cells, ["row", "actionhandler"]),
+                        }}
+                    />
+                );
+            }
+
+            return cellsCopy;
+        },
+        []
+    );
+
+    ////////////////////////////////////////////////////////
+
     const getColumns = () => {
         const { columns, columnState } = props;
 
@@ -96,15 +190,7 @@ export const Grid = (props: GridProps) => {
             : columns;
     };
 
-    const getStore = () => {
-        const { store } = useContext(GridContext);
-        return store || props.store;
-    };
-
     const getHeaderProps = (visible) => ({
-        columnManager: this.columnManager,
-        columns: this.getColumns(),
-        plugins: this.props.plugins,
         reducerKeys: this.props.reducerKeys,
         dataSource: this.props.gridData,
         filterFields: this.props.filterFields,
@@ -112,7 +198,6 @@ export const Grid = (props: GridProps) => {
         pageSize: this.props.pageSize,
         selectionModel: this.selectionModel,
         stateKey: this.props.stateKey,
-        store: this.getStore(),
         stateful: this.props.stateful,
         visible,
         menuState: this.props.menuState,
@@ -121,7 +206,6 @@ export const Grid = (props: GridProps) => {
 
     const setColumns = (props?: { stateKey: string; stateful: boolean }) => {
         const { stateKey, stateful } = props || {};
-        const store = getStore();
         const columns = getColumns();
 
         const savedColumns = stateful
@@ -138,9 +222,9 @@ export const Grid = (props: GridProps) => {
         if (!columns || columns.length === 0 || !Array.isArray(columns)) {
             throw new Error("A columns array is required");
         } else {
-            store.dispatch(
-                Action.setColumns({ columns: savedColumns, stateKey, stateful })
-            );
+            // store.dispatch(
+            Action.setColumns({ columns: savedColumns, stateKey, stateful });
+            // );
         }
     };
 
@@ -223,26 +307,10 @@ export const Grid = (props: GridProps) => {
     //////////////////////////////////////////////////////////////////////
 
     useEffect(() => {
-        const store = getStore();
         const columns = getColumns();
 
         if (!stateKey)
             throw new Error("A stateKey is required to initialize the grid");
-
-        setColumns();
-
-        this.setData();
-
-        columnManager.init({
-            plugins,
-            store,
-            events,
-            selectionModel: this.selectionModel,
-            editor: this.editor,
-            columns,
-            dataSource,
-            reducerKeys,
-        });
 
         selectionModel.init(plugins, stateKey, store, events);
 
@@ -251,49 +319,56 @@ export const Grid = (props: GridProps) => {
     //////////////////////////////////////////////////////////////////////
 
     return (
-        <div
-            className={prefix(
-                CLASS_NAMES.CONTAINER,
-                isLoading ? CLASS_NAMES.IS_LOADING : null,
-                className || ""
-            )}
+        <GridContext.Provider
+            value={{
+                addActionColumn,
+                reload,
+            }}
         >
-            <Message
-                reducerKeys={reducerKeys}
-                stateKey={stateKey}
-                store={store}
-                plugins={plugins}
-            />
-            <BulkActionToolbar
-                plugins={plugins}
-                reducerKeys={reducerKeys}
-                selectionModel={this.selectionModel}
-                stateKey={stateKey}
-                store={store}
-            />
-            <FixedHeader
-                headerHidden={headerHidden}
-                {...getHeaderProps(true)}
-            />
-            <TableContainer
-                editorComponent={editorComponent}
-                headerProps={getHeaderProps(false)}
-                height={height}
-                infinite={infinite}
-                rowProps={this.getRowProps()}
-            />
-            <PagerToolbar
-                dataSource={dataSource}
-                gridData={gridData}
-                pageSize={pageSize}
-                pagerState={pager}
-                plugins={plugins}
-                reducerKeys={reducerKeys}
-                stateKey={stateKey}
-                store={store}
-            />
-            <LoadingBar isLoading={isLoading} plugins={plugins} />
-        </div>
+            <div
+                className={prefix(
+                    CLASS_NAMES.CONTAINER,
+                    isLoading ? CLASS_NAMES.IS_LOADING : null,
+                    className || ""
+                )}
+            >
+                <Message
+                    reducerKeys={reducerKeys}
+                    stateKey={stateKey}
+                    store={store}
+                    plugins={plugins}
+                />
+                <BulkActionToolbar
+                    plugins={plugins}
+                    reducerKeys={reducerKeys}
+                    selectionModel={this.selectionModel}
+                    stateKey={stateKey}
+                    store={store}
+                />
+                <FixedHeader
+                    headerHidden={headerHidden}
+                    {...getHeaderProps(true)}
+                />
+                <TableContainer
+                    editorComponent={editorComponent}
+                    headerProps={getHeaderProps(false)}
+                    height={height}
+                    infinite={infinite}
+                    rowProps={this.getRowProps()}
+                />
+                <PagerToolbar
+                    dataSource={dataSource}
+                    gridData={gridData}
+                    pageSize={pageSize}
+                    pagerState={pager}
+                    plugins={plugins}
+                    reducerKeys={reducerKeys}
+                    stateKey={stateKey}
+                    store={store}
+                />
+                <LoadingBar isLoading={isLoading} plugins={plugins} />
+            </div>
+        </GridContext.Provider>
     );
 };
 
@@ -462,11 +537,11 @@ export class GridT extends Component {
 
         styleEl.type = "text/css";
 
-        if (styleEl.styleSheet) {
-            styleEl.styleSheet.cssText = styles;
-        } else {
-            styleEl.appendChild(document.createTextNode(styles));
-        }
+        // if (styleEl.styleSheet) {
+        //     styleEl.styleSheet.cssText = styles;
+        // } else {
+        //     styleEl.appendChild(document.createTextNode(styles));
+        // }
 
         head.appendChild(styleEl);
     };

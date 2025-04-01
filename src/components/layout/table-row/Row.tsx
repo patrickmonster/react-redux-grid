@@ -1,14 +1,13 @@
 import { isPluginEnabled } from "@/util/isPluginEnabled";
 import PropTypes from "prop-types";
 import { Component } from "react";
-import { DragSource, DropTarget } from "react-dnd";
 import { findDOMNode } from "react-dom";
 
 import { Cell } from "@/components/layout/table-row/row/Cell";
 import { EmptyCell } from "@/components/layout/table-row/row/EmptyCell";
-import RowContainer from "@/components/layout/table-row/row/RowContainer";
 
 import { gridConfig } from "@/constants/GridConstants";
+import { Column } from "@/type/columns";
 import { fireEvent } from "@/util/fire";
 import { getData, getRowKey } from "@/util/getData";
 import { prefix } from "@/util/prefix";
@@ -17,6 +16,213 @@ const { arrayOf, bool, func, object, string, oneOf, number, oneOfType } =
     PropTypes;
 
 const DRAG_INCREMENT = 15;
+// export default RowContainer(
+//     DropTarget("ROW", rowTarget, (connect) => ({
+//         connectDropTarget: connect.dropTarget(),
+//     }))(
+//         DragSource("ROW", rowSource, (connect, monitor) => ({
+//             connectDragSource: connect.dragSource(),
+//             isDragging: monitor.isDragging(),
+//         }))(Row)
+//     )
+// );
+
+export type RowProps = {
+    columnManager: object;
+    columns: Array<object>;
+    connectDragSource: func;
+    connectDropTarget: func;
+    data: Array<object>;
+    dataSource: object;
+    dragAndDrop: bool;
+    editor: object;
+    editorState: object;
+    emptyDataMessage: string;
+    events: object;
+    findRow: func.isRequired;
+    gridType: oneOf(["tree", "grid"]);
+    index: number;
+    isDragging: bool;
+    menuState: object;
+    nextRow: object;
+    pageSize: number;
+    pager: object;
+    plugins: object;
+    previousRow: object;
+    readFunc: func;
+    reducerKeys: oneOfType([object, string]);
+    row: object;
+    selectedRows: object;
+    selectionModel: object;
+    showTreeRootNode: bool;
+    stateKey: string;
+    stateful: bool;
+    store: object.isRequired;
+}
+
+export default (props : RowProps) => {
+    const { CLASS_NAMES } = gridConfig();
+    const {
+        columnManager,
+        columns,
+        connectDragSource,
+        connectDropTarget,
+        dragAndDrop,
+        editor,
+        editorState,
+        events,
+        gridType,
+        index,
+        isDragging,
+        menuState,
+        plugins,
+        readFunc,
+        reducerKeys,
+        row,
+        selectedRows,
+        selectionModel,
+        showTreeRootNode,
+        stateful,
+        stateKey,
+        store,
+        treeData,
+    } = props;
+
+    const id = row.get("_key");
+
+    const visibleColumns = columns.filter((col) => !col.hidden);
+    const cellValues = getCellValues(columns, row);
+
+    if (Object.keys(row).length !== columns.length) {
+        addEmptyCells(row, columns);
+    }
+
+    const isSelected = selectedRows ? selectedRows.get(id) : false;
+
+    const cells = Object.keys(cellValues).map((k, i) => {
+        const key = getRowKey(columns, row, columns[i].dataIndex);
+        const cellData = getCellData(
+            columns,
+            editor,
+            editorState,
+            row,
+            k,
+            i,
+            store
+        );
+        const cellTreeData = {
+            ...treeData,
+            expandable: columns[i].expandable,
+        };
+
+        return (
+            <Cell
+                cellData={cellData}
+                columns={columns}
+                dragAndDrop={dragAndDrop}
+                editor={editor}
+                editorState={editorState}
+                events={events}
+                gridType={gridType}
+                index={i}
+                isRowSelected={isSelected}
+                key={key}
+                readFunc={readFunc}
+                reducerKeys={reducerKeys}
+                row={cellValues}
+                rowId={id}
+                rowIndex={index}
+                selectionModel={selectionModel}
+                showTreeRootNode={showTreeRootNode}
+                stateKey={stateKey}
+                stateful={stateful}
+                store={store}
+                treeData={cellTreeData}
+            />
+        );
+    });
+
+    const editClass =
+        editorState && editorState.get(id) && editor.config.type !== "grid"
+            ? selectionModel.defaults.editCls
+            : "";
+
+    const selectedClass = isSelected ? selectionModel.defaults.activeCls : "";
+
+    const dragClass = isDragging ? CLASS_NAMES.ROW_IS_DRAGGING : "";
+
+    const rowProps = {
+        className: prefix(CLASS_NAMES.ROW, selectedClass, editClass, dragClass),
+        onClick: (e) => {
+            handleRowSingleClickEvent(
+                events,
+                row,
+                id,
+                selectionModel,
+                index,
+                isSelected,
+                e
+            );
+        },
+        onDoubleClick: (e) => {
+            handleRowDoubleClickEvent(
+                events,
+                row,
+                id,
+                selectionModel,
+                index,
+                isSelected,
+                e
+            );
+        },
+        onDragStart: this.handleDragStart.bind(this),
+    };
+
+    columnManager.addActionColumn({
+        cells,
+        columns,
+        type: "row",
+        id,
+        reducerKeys,
+        rowData: row,
+        rowIndex: index,
+        stateKey,
+        menuState,
+    });
+
+    selectionModel.updateCells({
+        cells,
+        rowId: id,
+        index,
+        type: "row",
+        reducerKeys,
+        stateKey,
+        rowData: cellValues,
+        isSelected: !isSelected,
+    });
+
+    addEmptyInsert(cells, visibleColumns, plugins, id);
+
+    let rowEl;
+
+    if (
+        isPluginEnabled(plugins, "ROW") &&
+        typeof plugins.ROW.renderer === "function"
+    ) {
+        // super important that we pass rowProps and cells
+        // since the user is almost certainly going to want both
+        // lets make sure this gets documented
+        rowEl = plugins.ROW.renderer({ rowProps, cells, row });
+    } else {
+        rowEl = <tr {...rowProps}>{cells}</tr>;
+    }
+
+    if (dragAndDrop) {
+        return connectDragSource(connectDropTarget(rowEl));
+    }
+
+    return rowEl;
+};
 
 export class Row extends Component {
     render() {
@@ -253,7 +459,7 @@ export class Row extends Component {
     }
 }
 
-export const getCellValues = (columns, row) => {
+export const getCellValues = (columns : Column[], row : any) => {
     const result = {};
     const dataIndexes = columns.map((col) => col.dataIndex);
 
@@ -282,7 +488,7 @@ export const addEmptyInsert = (cells, visibleColumns, plugins, id) => {
 };
 
 export const getCellData = (
-    columns,
+    columns: Column,
     editor,
     editorState,
     row,
@@ -651,14 +857,3 @@ const rowTarget = {
         }
     },
 };
-
-export default RowContainer(
-    DropTarget("ROW", rowTarget, (connect) => ({
-        connectDropTarget: connect.dropTarget(),
-    }))(
-        DragSource("ROW", rowSource, (connect, monitor) => ({
-            connectDragSource: connect.dragSource(),
-            isDragging: monitor.isDragging(),
-        }))(Row)
-    )
-);
