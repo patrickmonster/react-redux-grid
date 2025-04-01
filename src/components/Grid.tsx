@@ -68,7 +68,7 @@ export const Grid = <T extends Object>(props: GridProps<T>) => {
 
     const reload = useCallback(() => {
         const context = useContext(GridContext);
-        const visibleColumns = props.columns.filter((col) => !col.hidden);
+        const visibleColumns = context.columns.filter((col) => !col.hidden);
         context.config = {
             defaultColumnWidth: `${100 / visibleColumns.length}%`,
             minColumnWidth: 10,
@@ -96,7 +96,6 @@ export const Grid = <T extends Object>(props: GridProps<T>) => {
     const addActionColumn = useCallback(
         ({
             cells,
-            columns,
             type,
             id,
             reducerKeys,
@@ -106,6 +105,7 @@ export const Grid = <T extends Object>(props: GridProps<T>) => {
             stateKey,
             stateful,
         }) => {
+            const context = useContext(GridContext);
             const { GRID_ACTIONS } = plugins;
             const cellsCopy = cells;
 

@@ -3,14 +3,63 @@ import PropTypes from "prop-types";
 /* eslint-disable react/no-set-state */
 import { setColumnVisibility } from "@/actions/GridActions";
 import { hideMenu, showMenu } from "@/actions/plugins/actioncolumn/MenuActions";
+import { GridContext } from "@/components/Grid";
 import { gridConfig } from "@/constants/GridConstants";
 import { elementContains } from "@/util/elementContains";
 import { getRowBoundingRect } from "@/util/getRowBoundingRect";
 import { keyFromObject } from "@/util/keyGenerator";
 import { prefix } from "@/util/prefix";
-import { Component } from "react";
+import { Component, useContext, useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import { Menu } from "./actioncolumn/Menu";
+
+export type ActionClumnProps = {
+    type : any
+};
+
+export default ( ) =>{
+        const context = useContext(GridContext);
+    const { CLASS_NAMES } = gridConfig();
+
+    const [maxHeight, setMaxHeight] = useState<number>(0);
+    const [menuPosition, setMenuPosition] = useState<string | null>(null);
+    const contextRef = useRef<HTMLTableColElement>();
+
+    const menuShown =
+        menuState && menuState.get(rowId) ? menuState.get(rowId) : false;
+
+    useEffect(() {
+        const { menuState, rowId } = this.props;
+        const { menuPosition } = this.state;
+
+        const menuShown =
+            menuState && menuState.get(rowId) ? menuState.get(rowId) : false;
+
+        if (menuShown && !menuPosition) {
+            const row = contextRef.current?.parentElement;
+            if ( row ){
+                const { position, maxHeight } = getRowBoundingRect(row);
+    
+                if (position && maxHeight) {
+                    setMaxHeight(maxHeight);
+                    setMenuPosition(position);
+                }
+            }
+        } else if (!menuShown && menuPosition) {
+            setMaxHeight(0);
+            setMenuPosition(null);
+        }
+    }, []);
+
+    return (
+        <td ref={contextRef} {...containerProps}>
+            <span {...iconProps}>{menu}</span>
+        </td>
+    )
+    // return type === "header"
+    // ? getHeader(...actionArgs)
+    // : getColumn(...actionArgs);
+}
 
 export class ActionColumn extends Component {
     render() {
@@ -431,5 +480,3 @@ export const handleActionClick = (
         document.body.addEventListener("click", removeableEvent);
     }
 };
-
-export default ActionColumn;
