@@ -11,6 +11,9 @@
 // gridType	oneOf(['grid', 'tree'])	whether the grid will be a flat list or a tree view
 // data	arrayOf(object)	local data for grid to display, more information available
 // dataSource	func	function which returns data to display, more information available
+
+import { Column } from "./columns";
+
 // filterFields	object	optional object describing additional values to filter grid data
 export type GridType = "grid" | "tree";
 
@@ -28,7 +31,7 @@ export type PluginType = {
     SELECTION_MODEL: any;
 };
 
-export interface GridProps {
+export type GridProps<T> = {
     stateful?: boolean;
     height?: number | string | boolean;
     stateKey?: string;
@@ -40,6 +43,15 @@ export interface GridProps {
     emptyDataMessage?: any;
     dragAndDrop?: boolean;
     gridType?: GridType;
-    data?: Array<object>;
+    data?: T[] | T;
     filterFields?: object;
+} & React.HTMLProps<HTMLDivElement>;
+
+export interface GridContextProps {
+    addActionColumn: (props: any) => void;
+    reload: () => void;
+    config: any;
+    plugins: { [key: string]: any };
+    events: { [key: string]: any };
+    columns: Column[];
 }

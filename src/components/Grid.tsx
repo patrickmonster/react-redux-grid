@@ -19,11 +19,7 @@ import ActionColumn from "@/components/plugins/gridactions/ActionColumn";
 import LoadingBar from "@/components/plugins/loader/LoadingBar";
 import PagerToolbar from "@/components/plugins/pager/Pager";
 
-import {
-    CLASS_NAMES,
-    GRID_TYPES,
-    SORT_METHODS,
-} from "@/constants/GridConstants";
+import { CLASS_NAMES, SORT_METHODS } from "@/constants/GridConstants";
 
 import * as Action from "@/actions/GridActions";
 
@@ -33,52 +29,12 @@ import { keyFromObject } from "@/util/keyGenerator";
 import { mapStateToProps } from "@/util/mapStateToProps";
 import { prefix } from "@/util/prefix";
 
-import { Column } from "@/type/columns";
-import { PluginType } from "@/type/grid";
+import { GridContextProps, GridProps } from "@/type/grid";
 
 // import styles from "@/style/main.styl";
 
-export type GridProps<T> = {
-    columnState?: {
-        headerHidden?: boolean;
-        columns?: object[];
-        [key: string]: any;
-    };
-    columns: Column[];
-    data?: T[] | T;
-    dragAndDrop?: boolean;
-    editorState?: object;
-    emptyDataMessage?: any;
-    events?: object;
-    expandOnLoad?: boolean;
-    filterFields?: object;
-    gridType: GRID_TYPES;
-    height: string | number | boolean;
-    infinite?: boolean;
-    // loadingState?: boolean; // fix object -> boolean
-    isLoading?: boolean;
-    menuState?: object;
-    pageSize: number;
-    pager: object;
-    plugins: PluginType;
-    reducerKeys: object | string;
-    selectedRows: object;
-    showTreeRootNode?: boolean;
-    stateKey: string;
-    stateful?: boolean;
-    store: object;
-} & React.HTMLProps<HTMLDivElement>;
-
-export const GridContext = createContext<
-    Partial<{
-        addActionColumn: (props: any) => void;
-        reload: () => void;
-        config: any;
-        plugins: { [key: string]: any };
-        events: { [key: string]: any };
-        columns: Column[];
-    }>
->({});
+// 파라메타로 다 던지는거 집합
+export const GridContext = createContext<Partial<GridContextProps>>({});
 
 export const Grid = <T extends Object>(props: GridProps<T>) => {
     const {
