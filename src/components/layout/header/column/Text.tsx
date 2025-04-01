@@ -1,67 +1,44 @@
+import { useContext } from "react";
+
+import { GridContext } from "@/components/Grid";
 import { gridConfig } from "@/constants/GridConstants";
+import { Column as ColumnType } from "@/type/columns";
 import { keyFromObject } from "@/util/keyGenerator";
 import { prefix } from "@/util/prefix";
 
+import DragAndDropManager from "@/components/core/draganddrop/DragAndDropManager";
+
 export type TextProps = {
     actualIndex: number;
-    col: {
-        name: string;
-        moveable?: boolean;
-        defaultSortDirection?: string;
-        sortDirection?: string;
-        dataIndex: string;
-        hidden?: boolean;
-        sortMethod?: (a: any, b: any) => number;
-    };
-    columnManager: {
-        config: {
-            moveable: boolean;
-        };
-    };
-    dragAndDropManager: {
-        initDragable: (props: {
-            draggable: boolean;
-            className: string;
-            onDrag: () => void;
-            onDragStart: (event: React.DragEvent) => void;
-        }) => any;
-    };
-    sortHandle: React.ReactNode;
-};
+    col: ColumnType;
+} & React.PropsWithChildren;
 
-export const Text = ({
-    actualIndex,
-    col,
-    columnManager,
-    dragAndDropManager,
-    sortHandle,
-}: TextProps) => {
+export const Text = ({ actualIndex, col, children }: TextProps) => {
+    const { config } = useContext(GridContext);
     const { CLASS_NAMES } = gridConfig();
-    const innerHTML = col.name;
     const draggable =
-        col.moveable !== undefined
-            ? col.moveable
-            : columnManager.config.moveable;
-
-    const spanProps = dragAndDropManager.initDragable({
-        draggable: draggable,
-        className: draggable
-            ? prefix(CLASS_NAMES.DRAGGABLE_COLUMN, CLASS_NAMES.COLUMN)
-            : prefix(CLASS_NAMES.COLUMN),
-        onDrag: () => {},
-        onDragStart: (reactEvent) => {
-            const data = {
-                key: keyFromObject(col),
-                index: actualIndex,
-            };
-            reactEvent.dataTransfer.setData("Text", JSON.stringify(data));
-        },
-    });
+        col.moveable !== undefined ? col.moveable : config.moveable;
 
     return (
-        <span {...spanProps}>
-            {innerHTML}
-            {sortHandle}
-        </span>
+        <DragAndDropManager
+            as="span"
+            draggable={draggable}
+            className={
+                draggable
+                    ? prefix(CLASS_NAMES.DRAGGABLE_COLUMN, CLASS_NAMES.COLUMN)
+                    : prefix(CLASS_NAMES.COLUMN)
+            }
+            onDrag={() => {}}
+            onDragStart={(reactEvent) => {
+                const data = {
+                    key: keyFromObject(col),
+                    index: actualIndex,
+                };
+                reactEvent.dataTransfer.setData("Text", JSON.stringify(data));
+            }}
+        >
+            {col.name}
+            {children}
+        </DragAndDropManager>
     );
 };

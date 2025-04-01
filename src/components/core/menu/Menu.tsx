@@ -1,6 +1,5 @@
 import PropTypes from "prop-types";
 import { Component } from "react";
-import { connect } from "react-redux";
 
 import { MenuItem } from "@/components/core/menu/MenuItem";
 import { gridConfig } from "@/constants/GridConstants";

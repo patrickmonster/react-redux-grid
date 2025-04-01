@@ -8,7 +8,6 @@ import {
     useRef,
     useState,
 } from "react";
-import { connect } from "react-redux";
 
 import localStorageManager from "@/components/core/LocalStorageManager";
 import FixedHeader from "@/components/layout/FixedHeader";
@@ -33,13 +32,18 @@ import { GridContextProps, GridProps } from "@/type/grid";
 
 // import styles from "@/style/main.styl";
 
+type PartialPick<T, K extends keyof T> = Partial<T> & Pick<T, K>;
+
 // 파라메타로 다 던지는거 집합
-export const GridContext = createContext<Partial<GridContextProps>>({});
+export const GridContext = createContext<
+    PartialPick<GridContextProps, "columns">
+>({
+    columns: [],
+});
 
 export const Grid = <T extends Object>(props: GridProps<T>) => {
     const {
         className,
-        columnState,
         height,
         infinite,
         pager,

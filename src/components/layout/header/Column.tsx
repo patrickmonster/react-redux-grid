@@ -1,9 +1,7 @@
-import { DragHandle } from "@/components/layout/header/column/DragHandle";
-import { SortHandle } from "@/components/layout/header/column/SortHandle";
-import { Text } from "@/components/layout/header/column/Text";
-
 import { keyGenerator } from "@/util/keyGenerator";
 import { prefix } from "@/util/prefix";
+
+import { Column as ColumnType } from "@/type/columns";
 
 import {
     gridConfig,
@@ -13,6 +11,11 @@ import {
 
 import { reorderColumn } from "@/actions/core/ColumnManager";
 import { setSortDirection } from "@/actions/GridActions";
+import { GridContext } from "@/components/Grid";
+import { useCallback, useContext, useEffect, useState } from "react";
+
+import DragAndDropManager from "@/components/core/draganddrop/DragAndDropManager";
+import { Text as TextElement } from "./column/Text";
 
 const isChrome =
     navigator &&
@@ -21,10 +24,7 @@ const isChrome =
 
 export type ColumnProps = {
     actualIndex: number;
-    col: object;
-    columnManager: object;
-    columns: Array<object>;
-    dataSource: object;
+    col: ColumnType;
     dragAndDropManager: object;
     filterFields: object;
     index: number;
@@ -40,41 +40,25 @@ export const Column = ({
     actualIndex,
     scope,
     col,
-    columns,
-    columnManager,
-    dataSource,
     dragAndDropManager,
-    filterFields,
-    pageSize,
-    pager,
-    store,
     stateKey,
     index,
     stateful,
 }: ColumnProps) => {
-    if (col.hidden) {
-        return false;
-    }
+    const { config, columns } = useContext(GridContext);
+    if (col.hidden) return false;
+
     const { CLASS_NAMES } = gridConfig();
 
-    const isResizable = isColumnResizable(col, columnManager);
+    const [isResizable, setIsResizable] = useState(false);
+    const [isSortable, setIsSortable] = useState(false);
 
-    const sortable = isSortable(col, columnManager);
-
-    const visibleColumns = columns.filter((c) => !c.hidden);
-
-    const sortedColumn = columns.find((c) => c.sortDirection);
+    const visibleColumns = columns?.filter((c) => !c.hidden);
+    const sortedColumn = columns?.find((c) => c.sortDirection);
 
     const shouldShowCaret = sortedColumn
         ? sortedColumn.dataIndex === col.dataIndex
         : col.defaultSortDirection;
-
-    const direction =
-        col.sortDirection || col.defaultSortDirection || SORT_DIRECTIONS.ASCEND;
-
-    const sortHandleCls = shouldShowCaret
-        ? prefix(CLASS_NAMES.SORT_HANDLE_VISIBLE)
-        : "";
 
     const key = keyGenerator(col.name, "grid-column");
 
@@ -88,115 +72,122 @@ export const Column = ({
         scope,
         columns,
         key,
-        columnManager,
-        store,
         nextColumnKey,
         stateKey,
         stateful
     );
 
-    const sortHandle = sortable ? (
-        <SortHandle
-            {...{
-                col,
-                columns,
-                columnManager,
-                dataSource,
-                direction,
-                pager,
-                sortHandleCls,
-                store,
-            }}
-        />
-    ) : null;
+    const getWidth = () => {
+        // const { config, columns } = useContext(GridContext);
+        const visibleColumns = columns.filter((_col) => !_col.hidden) || [];
+        const lastColumn = visibleColumns[visibleColumns.length - 1];
+        const isLastColumn = lastColumn && lastColumn.name === col.name;
+        const totalWidth = columns.reduce((a, _col) => {
+            if (_col.hidden) {
+                return a + 0;
+            }
+            return a + parseFloat(_col.width || config.defaultColumnWidth);
+        }, 0);
 
-    const dragHandle = isResizable ? (
-        <DragHandle {...{ col, dragAndDropManager, handleDrag }} />
-    ) : null;
+        let width = col.width || config.defaultColumnWidth;
 
-    let headerClass = col.className
-        ? `${col.className} ${isResizable ? prefix("resizable") : ""}`
-        : `${isResizable ? prefix("resizable") : ""}`;
+        if (isLastColumn && totalWidth !== 0 && totalWidth < 100) {
+            width = `${100 - (totalWidth - parseFloat(width))}%`;
+        }
 
-    if (sortHandleCls) {
-        headerClass = `${headerClass} ${sortHandleCls}`;
-    }
-
-    if (col.sortable) {
-        headerClass = `${headerClass} ${prefix("is-sortable")}`;
-    }
-
-    if (index === 0) {
-        headerClass = `${headerClass} ${prefix("is-first-column")}`;
-    }
-
-    const clickArgs = {
-        columns,
-        col,
-        columnManager,
-        dataSource,
-        direction,
-        filterFields,
-        pageSize,
-        pager,
-        stateKey,
-        store,
+        return width;
     };
 
-    const headerProps = {
-        className: headerClass,
-        onClick: handleColumnClick.bind(scope, clickArgs),
-        onDrop: handleDrop.bind(
-            scope,
-            actualIndex,
-            columns,
-            stateful,
-            stateKey,
-            store
-        ),
-        onDragOver: (reactEvent) => {
-            reactEvent.preventDefault();
-        },
-        key,
-        style: {
-            width: getWidth(
-                col,
-                key,
-                columns,
-                columnManager.config.defaultColumnWidth,
-                index
-            ),
-        },
-    };
+    useCallback(() => {
+        if (
+            col.sortable ||
+            (config.sortable.enabled && col.sortable !== false)
+        ) {
+            handleSort(columns, col, stateKey, store);
+        }
 
-    if (!isChrome) {
-        headerProps.onDragOver = (reactEvent) => {
-            // due to a bug in firefox, we need to set a global to
-            // preserve the x coords
-            // http://stackoverflow.com/questions/11656061/
-            // event-clientx-showing-as-0-in-firefox-for-dragend-event
-            window.reactGridXcoord = reactEvent.clientX;
-            reactEvent.preventDefault();
-        };
-    }
+        if (typeof col.HANDLE_CLICK === "function") {
+            col.HANDLE_CLICK(
+                {
+                    columns,
+                    column: col,
+                    sortDirection: direction,
+                },
+                null
+            );
+        }
+    }, []);
 
-    const innerHTML = (
-        <Text
-            {...{
-                actualIndex,
-                col,
-                index,
-                columnManager,
-                dragAndDropManager,
-                sortHandle,
-            }}
-        />
-    );
+    useEffect(() => {
+        const { config } = useContext(GridContext);
+        if (col.resizable !== undefined) {
+            setIsResizable(col.resizable);
+        } else if (config.resizable !== undefined) {
+            setIsResizable(config.resizable);
+        }
+        setIsResizable(config.defaultResizable);
+    }, [col.resizable, config.resizable]);
+
+    useEffect(() => {
+        const { config } = useContext(GridContext);
+        if (col.sortable !== undefined) {
+            setIsSortable(col.sortable);
+        } else if (config.sortable !== undefined) {
+            setIsSortable(config.sortable);
+        }
+        setIsSortable(config.defaultSortable);
+    }, [col.sortable, config.sortable]);
 
     return (
-        <th {...headerProps}>
-            {innerHTML}
-            {dragHandle}
+        <th
+            key={key}
+            className={[
+                col.className
+                    ? `${col.className} ${
+                          isResizable ? prefix("resizable") : ""
+                      }`
+                    : `${isResizable ? prefix("resizable") : ""}`,
+                shouldShowCaret ? prefix(CLASS_NAMES.SORT_HANDLE_VISIBLE) : "",
+                col.sortable ? prefix("is-sortable") : "",
+                index === 0 ? prefix("is-first-column") : "",
+            ]
+                .filter((t) => t)
+                .join(" ")}
+            style={{
+                width: getWidth(),
+            }}
+            onClick={handleColumnClick.bind(scope, clickArgs)}
+            onDragOver={(reactEvent) => {
+                if (!isChrome && "reactGridXcoord" in window)
+                    window.reactGridXcoord = reactEvent.clientX;
+                reactEvent.preventDefault();
+            }}
+        >
+            {
+                <TextElement actualIndex={actualIndex} col={col}>
+                    {isSortable && (
+                        <SortHandle
+                            {...{
+                                col,
+                                columns,
+                                columnManager,
+                                dataSource,
+                                direction,
+                                pager,
+                                sortHandleCls,
+                                store,
+                            }}
+                        />
+                    )}
+                </TextElement>
+            }
+            {isResizable ? (
+                <DragAndDropManager
+                    as="span"
+                    draggable
+                    handleDrag={handleDrag}
+                />
+            ) : null}
         </th>
     );
 };
@@ -341,7 +332,7 @@ export const handleColumnClick = ({
     }
 };
 
-export const isSortable = (col, columnManager) => {
+export const isSortable = (col: Column, columnManager) => {
     if (col.sortable !== undefined) {
         return col.sortable;
     } else if (columnManager.config.sortable.enabled !== undefined) {
@@ -349,34 +340,4 @@ export const isSortable = (col, columnManager) => {
     }
 
     return columnManager.config.defaultSortable;
-};
-
-export const getWidth = (col, key, columns, defaultColumnWidth) => {
-    const visibleColumns = columns.filter((_col) => !_col.hidden);
-    const lastColumn = visibleColumns[visibleColumns.length - 1];
-    const isLastColumn = lastColumn && lastColumn.name === col.name;
-    const totalWidth = columns.reduce((a, _col) => {
-        if (_col.hidden) {
-            return a + 0;
-        }
-        return a + parseFloat(_col.width || defaultColumnWidth);
-    }, 0);
-
-    let width = col.width || defaultColumnWidth;
-
-    if (isLastColumn && totalWidth !== 0 && totalWidth < 100) {
-        width = `${100 - (totalWidth - parseFloat(width))}%`;
-    }
-
-    return width;
-};
-
-export const isColumnResizable = (col, columnManager) => {
-    if (col.resizable !== undefined) {
-        return col.resizable;
-    } else if (columnManager.config.resizable !== undefined) {
-        return columnManager.config.resizable;
-    }
-
-    return columnManager.config.defaultResizable;
 };

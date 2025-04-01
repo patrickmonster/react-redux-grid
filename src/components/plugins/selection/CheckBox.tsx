@@ -7,7 +7,6 @@ import { fireEvent } from "@/util/fire";
 import { prefix } from "@/util/prefix";
 import { stateGetter } from "@/util/stateGetter";
 import PropTypes from "prop-types";
-import { connect } from "react-redux";
 
 import React from "react";
 

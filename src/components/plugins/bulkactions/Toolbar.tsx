@@ -4,7 +4,6 @@ import { keyFromObject } from "@/util/keyGenerator";
 import { prefix } from "@/util/prefix";
 import { stateGetter } from "@/util/stateGetter";
 import { useEffect, useRef } from "react";
-// import { connect } from "react-redux";
 
 export type BulkActionToolbarPrpops = {
     bulkActionState: object;

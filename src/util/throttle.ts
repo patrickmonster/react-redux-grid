@@ -1,4 +1,14 @@
-export function throttle(callback, scope, limit = 100, options = {}) {
+type ThrottleOptions = {
+    leading?: boolean;
+    trailing?: boolean;
+};
+
+export function throttle(
+    callback: Function,
+    scope,
+    limit = 100,
+    options: ThrottleOptions = {}
+) {
     options = {
         leading: true,
         trailing: false,
@@ -12,7 +22,7 @@ export function throttle(callback, scope, limit = 100, options = {}) {
         skip = true;
     }
 
-    const later = debounce(function dodebounce() {
+    const later = debounce(() => {
         if (options.trailing) {
             callback.apply(scope, arguments);
         }
@@ -44,8 +54,8 @@ export function throttle(callback, scope, limit = 100, options = {}) {
     };
 }
 
-export function debounce(func, wait, immediate) {
-    let timeout;
+export function debounce(func: Function, wait: number, immediate = false) {
+    let timeout: NodeJS.Timer | null;
 
     return function doDebounce() {
         const context = this;

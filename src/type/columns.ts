@@ -25,6 +25,11 @@ export interface Column {
     className?: string;
     hidden?: boolean;
 
+    resizable?: boolean; // 열크기 조절 가능여부
+    defaultResizable?: boolean; // 기본 열크기 조절 가능여부
+    sortable?: boolean; // 정렬 가능 여부
+    defaultSortDirection?: "ASC" | "DESC"; // 기본 정렬 방향
+    sortDirection?: "ASC" | "DESC"; // 현재 정렬 방향
     hideable?: boolean;
     moveable?: boolean;
     createKeyFrom?: boolean; // 유니크키 여부

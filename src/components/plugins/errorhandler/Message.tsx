@@ -1,10 +1,8 @@
-import PropTypes from "prop-types";
-import { connect } from "react-redux";
-
 import { dismissError } from "@/actions/plugins/errorhandler/ErrorHandlerActions";
 import { gridConfig } from "@/constants/GridConstants";
 import { prefix } from "@/util/prefix";
 import { stateGetter } from "@/util/stateGetter";
+import PropTypes from "prop-types";
 
 export const Message = ({ errorHandler, plugins, store, stateKey }) => {
     const defaultMessage =
